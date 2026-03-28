@@ -1,9 +1,11 @@
 let player;
-let enemy;
+let enemiesGroup;
+let enemies = []; // Array to store Enemy instances for updating
 
 const BASE_WIDTH = 720;
 const BASE_HEIGHT = 480;
 const CANVAS_PADDING = 16;
+const ENEMY_COUNT = 10;
 
 
 function setup() {
@@ -11,8 +13,20 @@ function setup() {
   fitCanvasDisplayToWindow();
   timer = new CountdownTimer(30000); // 30 seconds in milliseconds
   timer.start();
+
+  enemiesGroup = new Group();
+
   player = new Player(120, 260, 36, 48);
-  germ = new Enemy(600, 100, 20, 20, {health:10, damage:3, color:'red', });
+
+  for (let i = 0; i < ENEMY_COUNT; i++) {
+    let enemyInstance = new Enemy(
+      random(100, BASE_WIDTH - 100), 
+      random(100, BASE_HEIGHT - 100), 
+      20, 20, 
+      { group: enemiesGroup, health: 10, damage: 3, speed: random(1, 3) }
+    );
+    enemies.push(enemyInstance);
+  }
 }
 
 function draw() {
@@ -23,6 +37,11 @@ function draw() {
   camera.off();
 
   drawHUD(timer.getRemainingTime()/1000);
+
+  // Update each enemy instance
+  for (let enemy of enemies) {
+    enemy.update();
+  }
 
   camera.x = width / 2;
   camera.y = height / 2;
