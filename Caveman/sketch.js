@@ -14,7 +14,7 @@ function setup() {
 
 function draw() {
   background("#555555");
-  player.move();
+  player.update();
 
   camera.x = width / 2;
   camera.y = height / 2;
