@@ -33,7 +33,6 @@ function draw() {
   background("#555555");
   camera.on();
   player.move();
-  germ.update();
   camera.off();
 
   drawHUD(timer.getRemainingTime()/1000);
