@@ -11,7 +11,7 @@ function setup() {
   fitCanvasDisplayToWindow();
 
   player = new Player(120, 260, 36, 48);
-  germ = new Enemy(600, 100, {health:10, dmage:3, speed:1, color:'red', });
+  germ = new Enemy(600, 100, 20, 20, {health:10, damage:3, color:'red', });
 }
 
 function draw() {
