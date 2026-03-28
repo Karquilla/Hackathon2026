@@ -10,7 +10,7 @@ const ENEMY_COUNT = 10;
 
 function preload() {
   // Load the image directly. We'll define the frame size in the Enemy class.
-  enemyImage = loadImage("assets/spriteSheet.png");
+  enemyImage = loadImage("assets/spriteSheet-export.png");
 }
 
 function setup() {
