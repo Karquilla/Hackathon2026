@@ -1,12 +1,17 @@
 let player;
 let enemiesGroup;
 let enemies = []; // Array to store Enemy instances for updating
+let enemyImage;
 
 const BASE_WIDTH = 720;
 const BASE_HEIGHT = 480;
 const CANVAS_PADDING = 16;
 const ENEMY_COUNT = 10;
 
+function preload() {
+  // Load the image directly. We'll define the frame size in the Enemy class.
+  enemyImage = loadImage("assets/spriteSheet.png");
+}
 
 function setup() {
   new Canvas(BASE_WIDTH, BASE_HEIGHT);
@@ -22,8 +27,14 @@ function setup() {
     let enemyInstance = new Enemy(
       random(100, BASE_WIDTH - 100), 
       random(100, BASE_HEIGHT - 100), 
-      20, 20, 
-      { group: enemiesGroup, health: 10, damage: 3, speed: random(1, 3) }
+      16, 16, 
+      { 
+        group: enemiesGroup, 
+        health: 10, 
+        damage: 3, 
+        speed: random(1, 3),
+        spriteSheetImage: enemyImage
+      }
     );
     enemies.push(enemyInstance);
   }
