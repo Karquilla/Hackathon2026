@@ -11,6 +11,8 @@ const ENEMY_COUNT = 10;
 function setup() {
   new Canvas(BASE_WIDTH, BASE_HEIGHT);
   fitCanvasDisplayToWindow();
+  timer = new CountdownTimer(30000); // 30 seconds in milliseconds
+  timer.start();
 
   enemiesGroup = new Group();
 
@@ -29,7 +31,12 @@ function setup() {
 
 function draw() {
   background("#555555");
+  camera.on();
   player.move();
+  germ.update();
+  camera.off();
+
+  drawHUD(timer.getRemainingTime()/1000);
 
   // Update each enemy instance
   for (let enemy of enemies) {
