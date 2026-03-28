@@ -9,7 +9,7 @@ const CANVAS_PADDING = 16;
 function setup() {
   new Canvas(BASE_WIDTH, BASE_HEIGHT);
   fitCanvasDisplayToWindow();
-  timer = new Timer(30);
+  timer = new CountdownTimer(30000); // 30 seconds in milliseconds
   timer.start();
   player = new Player(120, 260, 36, 48);
   germ = new Enemy(600, 100, 20, 20, {health:10, damage:3, color:'red', });
@@ -22,7 +22,7 @@ function draw() {
   germ.update();
   camera.off();
 
-  drawHUD(timer.getElapsedTime());
+  drawHUD(timer.getRemainingTime()/1000);
 
   camera.x = width / 2;
   camera.y = height / 2;
