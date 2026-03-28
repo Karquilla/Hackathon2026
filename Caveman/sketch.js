@@ -43,7 +43,7 @@ function setup() {
 function draw() {
   background("#555555");
   camera.on();
-  player.move();
+  player.update(enemiesGroup);
   camera.off();
 
   drawHUD(timer.getRemainingTime()/1000);
