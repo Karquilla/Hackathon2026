@@ -9,15 +9,20 @@ const CANVAS_PADDING = 16;
 function setup() {
   new Canvas(BASE_WIDTH, BASE_HEIGHT);
   fitCanvasDisplayToWindow();
-
+  timer = new Timer(30);
+  timer.start();
   player = new Player(120, 260, 36, 48);
   germ = new Enemy(600, 100, 20, 20, {health:10, damage:3, color:'red', });
 }
 
 function draw() {
   background("#555555");
+  camera.on();
   player.move();
   germ.update();
+  camera.off();
+
+  drawHUD(timer.getElapsedTime());
 
   camera.x = width / 2;
   camera.y = height / 2;
