@@ -1,4 +1,5 @@
 let player;
+let enemy;
 
 const BASE_WIDTH = 720;
 const BASE_HEIGHT = 480;
@@ -10,11 +11,13 @@ function setup() {
   fitCanvasDisplayToWindow();
 
   player = new Player(120, 260, 36, 48);
+  germ = new Enemy(600, 100, {health:10, dmage:3, speed:1, color:'red', });
 }
 
 function draw() {
   background("#555555");
-  player.update();
+  player.move();
+  germ.update();
 
   camera.x = width / 2;
   camera.y = height / 2;
