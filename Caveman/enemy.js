@@ -11,6 +11,18 @@ class Enemy {
         this.body.damage = options.damage !== undefined ? options.damage : 10;
         this.body.color = options.color || 'red';
         this.body.type = options.type || 'basic';
+
+        // Add spritesheet handling
+        if (options.spriteSheetImage) {
+            // Pick a random frame index from 0 to 4
+            let randomFrame = floor(random(5));
+            // Add a static animation using only that frame
+            // Using { w: 16, h: 16 } to define the frame size
+            this.body.addAni('idle', options.spriteSheetImage, { w: 16, h: 16, frames: 5 });
+            this.body.ani = 'idle';
+            this.body.ani.frame = randomFrame;
+            this.body.ani.stop();
+        }
         
         // Random movement setup
         this.body.rotationLock = true;
