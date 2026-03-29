@@ -15,7 +15,7 @@ const ENEMY_TYPE_KEYS = ["cell_green", "cell_blue", "cell_red", "cell_orange", "
 
 function preload() {
   // Load the image directly. We'll define the frame size in the Enemy class.
-  enemyImage = loadImage("assets/spriteSheet-export.png");
+  enemyImage = loadImage("assets/spriteSheet.png");
   // Uncomment when your HUD sheet is ready:
   // uiHudSheet = loadImage("assets/ui-hud-sheet.png");
 }
