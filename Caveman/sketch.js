@@ -404,16 +404,17 @@ function clearStageFloors() {
 
 function buildStage4Platforms() {
   if (!floorManager) return;
+  const platformDrop = 90;
 
   floorManager.add(WORLD_WIDTH / 2, WORLD_HEIGHT - 18, WORLD_WIDTH, 36);
-  floorManager.add(330, WORLD_HEIGHT - 150, 220, 20);
-  floorManager.add(620, WORLD_HEIGHT - 260, 180, 20);
-  floorManager.add(960, WORLD_HEIGHT - 360, 240, 20);
-  floorManager.add(1320, WORLD_HEIGHT - 250, 170, 20);
-  floorManager.add(1620, WORLD_HEIGHT - 140, 260, 20);
-  floorManager.add(1940, WORLD_HEIGHT - 300, 180, 20);
-  floorManager.add(2260, WORLD_HEIGHT - 420, 240, 20);
-  floorManager.add(2580, WORLD_HEIGHT - 220, 220, 20);
+  floorManager.add(330, WORLD_HEIGHT - 150 + platformDrop, 220, 20);
+  floorManager.add(620, WORLD_HEIGHT - 260 + platformDrop, 180, 20);
+  floorManager.add(960, WORLD_HEIGHT - 360 + platformDrop, 240, 20);
+  floorManager.add(1320, WORLD_HEIGHT - 250 + platformDrop, 170, 20);
+  floorManager.add(1620, WORLD_HEIGHT - 140 + platformDrop, 260, 20);
+  floorManager.add(1940, WORLD_HEIGHT - 300 + platformDrop, 180, 20);
+  floorManager.add(2260, WORLD_HEIGHT - 420 + platformDrop, 240, 20);
+  floorManager.add(2580, WORLD_HEIGHT - 220 + platformDrop, 220, 20);
 }
 
 function formatEvolutionBonuses(bonuses) {
