@@ -357,6 +357,18 @@ class Enemy {
                 this.body.direction += random(-45, 45);
             }
         }
+
+        this.updateFacingDirection();
+    }
+
+    updateFacingDirection() {
+        const faceThreshold = 0.05;
+
+        if (this.body.vel.x > faceThreshold) {
+            this.body.mirror.x = true;
+        } else if (this.body.vel.x < -faceThreshold) {
+            this.body.mirror.x = false;
+        }
     }
 
     takeDamage(amount) {

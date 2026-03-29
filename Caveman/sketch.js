@@ -22,11 +22,10 @@ const CANVAS_HEIGHT = 720;
 const WORLD_WIDTH = 2800;
 const WORLD_HEIGHT = 1800;
 const CANVAS_PADDING = 16;
-const ENEMY_COUNT = 40;
 const CAMERA_ZOOM = 1.8;
 const CAMERA_EDGE_BUFFER_X = 170;
 const CAMERA_EDGE_BUFFER_Y = 110;
-const DEBUG_START_STAGE = null;
+const DEBUG_START_STAGE = 5;
 const STAGE1_ENEMY_TYPE_KEYS = ["cell_green", "cell_blue", "cell_red", "cell_orange", "cell_purple"];
 const STAGE2_ENEMY_TYPE_KEYS = ["org_green", "org_blue", "org_red", "org_orange", "org_purple"];
 const STAGE3_ENEMY_TYPE_KEYS = ["fsh_green", "fsh_blue", "fsh_red", "fsh_orange", "fsh_purple"];
@@ -51,12 +50,23 @@ const STAGE5_PLATFORM_TILES = {
   right:  { x: 112, y: 304, w: 16, h: 16 }
 };
 const PLAYER_STAGE_SIZE_RETAIN = 0.8;
+const STAGE_ENEMY_SPEED_MULTIPLIERS = {
+  4: 0.8,
+  5: 0.75
+};
 const ENEMY_SIZE_VARIANCE = {
   1: { min: 0.6, max: 1.7 },
   2: { min: 0.65, max: 1.75 },
   3: { min: 0.55, max: 1.9 },
   4: { min: 0.5, max: 2.0 },
   5: { min: 0.5, max: 2.05 }
+};
+const STAGE_ENEMY_COUNTS = {
+  1: 40,
+  2: 40,
+  3: 40,
+  4: 40,
+  5: 40
 };
 
 function preload() {
@@ -80,7 +90,7 @@ function preload() {
 function setup() {
   new Canvas(CANVAS_WIDTH, CANVAS_HEIGHT);
   fitCanvasDisplayToWindow();
-  timer = new CountdownTimer(10000);
+  timer = new CountdownTimer(20000);
 
   enemiesGroup = new Group();
   floorManager = new Floor({ spriteSheetImage: enemyImage, platformTiles: STAGE4_PLATFORM_TILES });
@@ -129,6 +139,9 @@ function draw() {
           activeFloors
         );
       }
+
+      cullRemovedEnemies();
+      maintainEnemyPopulation();
     }
   }
 
@@ -213,56 +226,64 @@ function drawStageEndOverlay() {
 function spawnEnemies(typeKeys) {
   clearEnemies();
 
-  const isPlatformStage = stageNumber >= 4;
+  const enemyCount = getEnemyCountForStage(stageNumber);
 
-  for (let i = 0; i < ENEMY_COUNT; i++) {
-    const selectedType = random(typeKeys);
-    const sizeMultiplier = rollEnemySizeMultiplier(stageNumber);
-
-    let ew = 16;
-    let eh = 16;
-
-    if (isPlatformStage) {
-      ew = 32;
-    }
-
-    ew = max(12, round(ew * sizeMultiplier));
-    eh = max(12, round(eh * sizeMultiplier));
-
-    let x, y;
-
-    if (isPlatformStage) {
-      const spawnPlatforms = [
-        floorManager.group[0],
-        floorManager.group[1],
-        floorManager.group[2],
-        floorManager.group[3],
-        floorManager.group[4],
-      ].filter(Boolean);
-
-      const platform = random(spawnPlatforms);
-      const margin = 24;
-
-      x = random(
-        platform.x - platform.w / 2 + margin,
-        platform.x + platform.w / 2 - margin
-      );
-
-      y = platform.y - platform.h / 2 - eh / 2;
-    } else {
-      x = random(100, WORLD_WIDTH - 100);
-      y = random(100, WORLD_HEIGHT - 100);
-    }
-
-    const enemyInstance = new Enemy(x, y, ew, eh, {
-      group: enemiesGroup,
-      type: selectedType,
-      spriteSheetImage: enemyImage,
-      movementMode: isPlatformStage ? "platformer" : "topdown"
-    });
-
-    enemies.push(enemyInstance);
+  for (let i = 0; i < enemyCount; i++) {
+    spawnEnemy(typeKeys);
   }
+}
+
+function spawnEnemy(typeKeys) {
+  const isPlatformStage = stageNumber >= 4;
+  const selectedType = random(typeKeys);
+  const sizeMultiplier = rollEnemySizeMultiplier(stageNumber);
+
+  let ew = 16;
+  let eh = 16;
+
+  if (isPlatformStage) {
+    ew = 32;
+  }
+
+  ew = max(12, round(ew * sizeMultiplier));
+  eh = max(12, round(eh * sizeMultiplier));
+
+  let x, y;
+
+  if (isPlatformStage) {
+    const spawnPlatforms = [
+      floorManager.group[0],
+      floorManager.group[1],
+      floorManager.group[2],
+      floorManager.group[3],
+      floorManager.group[4],
+    ].filter(Boolean);
+
+    const platform = random(spawnPlatforms);
+    if (!platform) return;
+
+    const margin = 24;
+
+    x = random(
+      platform.x - platform.w / 2 + margin,
+      platform.x + platform.w / 2 - margin
+    );
+
+    y = platform.y - platform.h / 2 - eh / 2;
+  } else {
+    x = random(100, WORLD_WIDTH - 100);
+    y = random(100, WORLD_HEIGHT - 100);
+  }
+
+  const enemyInstance = new Enemy(x, y, ew, eh, {
+    group: enemiesGroup,
+    type: selectedType,
+    spriteSheetImage: enemyImage,
+    speed: getEnemySpeedForStage(stageNumber, selectedType),
+    movementMode: isPlatformStage ? "platformer" : "topdown"
+  });
+
+  enemies.push(enemyInstance);
 }
 
 function clearEnemies() {
@@ -272,6 +293,20 @@ function clearEnemies() {
     }
   }
   enemies = [];
+}
+
+function cullRemovedEnemies() {
+  enemies = enemies.filter(enemy => enemy?.body && !enemy.body.removed);
+}
+
+function maintainEnemyPopulation() {
+  const targetCount = getEnemyCountForStage(stageNumber);
+  const typeKeys = getEnemyTypeKeysForStage(stageNumber);
+  if (!typeKeys.length) return;
+
+  while (enemies.length < targetCount) {
+    spawnEnemy(typeKeys);
+  }
 }
 
 function freezeActiveActors() {
@@ -708,6 +743,33 @@ function formatBonusValue(value) {
 
 function getEnemySizeVariance(stage) {
   return ENEMY_SIZE_VARIANCE[stage] ?? { min: 0.9, max: 1.1 };
+}
+
+function getEnemyCountForStage(stage) {
+  return STAGE_ENEMY_COUNTS[stage] ?? 40;
+}
+
+function getEnemyTypeKeysForStage(stage) {
+  if (stage === 1) return STAGE1_ENEMY_TYPE_KEYS;
+  if (stage === 2) return STAGE2_ENEMY_TYPE_KEYS;
+  if (stage === 3) return STAGE3_ENEMY_TYPE_KEYS;
+  if (stage === 4) return STAGE4_ENEMY_TYPE_KEYS;
+  if (stage === 5) return STAGE5_ENEMY_TYPE_KEYS;
+  return [];
+}
+
+function getEnemySpeedForStage(stage, typeKey) {
+  const typeData =
+    ENEMY_CELL[typeKey] ||
+    ENEMY_ORGANISM[typeKey] ||
+    ENEMY_FISH[typeKey] ||
+    MAMMALS[typeKey] ||
+    HUMANS[typeKey] ||
+    {};
+
+  const baseSpeed = typeData.speed ?? 2;
+  const multiplier = STAGE_ENEMY_SPEED_MULTIPLIERS[stage] ?? 1;
+  return baseSpeed * multiplier;
 }
 
 function rollEnemySizeMultiplier(stage) {

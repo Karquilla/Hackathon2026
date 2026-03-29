@@ -171,6 +171,7 @@ class Player {
   update(enemies, worldBounds = null, floors = null) {
     this.move();
     this.resolveEnvironment(worldBounds, floors);
+    this.updateFacingDirection();
 
     if (enemies) {
       this.tryFireGrapple(enemies);
@@ -353,8 +354,22 @@ class Player {
 
     if (!frameWidth || !frameHeight) return;
 
-    this.body.scale.x = bodyWidth / frameWidth;
-    this.body.scale.y = bodyHeight / frameHeight;
+    const widthScale = bodyWidth / frameWidth;
+    const heightScale = bodyHeight / frameHeight;
+    const uniformScale = min(widthScale, heightScale);
+
+    this.body.scale.x = uniformScale;
+    this.body.scale.y = uniformScale;
+  }
+
+  updateFacingDirection() {
+    const faceThreshold = 0.05;
+
+    if (this.body.vel.x > faceThreshold) {
+      this.body.mirror.x = true;
+    } else if (this.body.vel.x < -faceThreshold) {
+      this.body.mirror.x = false;
+    }
   }
 
   getCombatSize() {
