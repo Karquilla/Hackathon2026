@@ -4,6 +4,7 @@ let enemies = []; // Array to store Enemy instances for updating
 let enemyImage;
 let uiHudSheet = null;
 let timer;
+let floorManager;
 let stageEnded = false;
 let stageResultText = "";
 let stageNumber = 1;
@@ -19,6 +20,7 @@ const ENEMY_COUNT = 10;
 const CAMERA_ZOOM = 1.8;
 const CAMERA_EDGE_BUFFER_X = 170;
 const CAMERA_EDGE_BUFFER_Y = 110;
+const DEBUG_START_STAGE = 4; // Set to 1, 2, 3, or 4 to jump directly into that stage.
 const STAGE1_ENEMY_TYPE_KEYS = ["cell_green", "cell_blue", "cell_red", "cell_orange", "cell_purple"];
 const STAGE2_ENEMY_TYPE_KEYS = ["org_green", "org_blue", "org_red", "org_orange", "org_purple"];
 const STAGE3_ENEMY_TYPE_KEYS = ["fsh_green", "fsh_blue", "fsh_red", "fsh_orange", "fsh_purple"];
@@ -37,6 +39,7 @@ function setup() {
   timer.start();
 
   enemiesGroup = new Group();
+  floorManager = new Floor();
 
   player = new Player(120, 260, 16, 24);
   player.configureForStage(stageNumber);
@@ -57,6 +60,7 @@ function setup() {
   setHUDBorderTiles(enemyImage);
 
   spawnEnemies(STAGE1_ENEMY_TYPE_KEYS);
+  applyDebugStartStage();
 }
 
 function draw() {
@@ -71,7 +75,10 @@ function draw() {
   drawWorldBounds();
 
   if (!stageEnded) {
-    player.update(enemiesGroup, { minX: 0, minY: 0, maxX: WORLD_WIDTH, maxY: WORLD_HEIGHT });
+    const activeEnemies = stageNumber >= 4 ? null : enemiesGroup;
+    const activeFloors = stageNumber >= 4 ? floorManager?.group : null;
+
+    player.update(activeEnemies, { minX: 0, minY: 0, maxX: WORLD_WIDTH, maxY: WORLD_HEIGHT }, activeFloors);
 
     // Update each enemy instance
     for (let enemy of enemies) {
@@ -127,8 +134,12 @@ function endStage() {
     stageResultText = `Stage ${stageNumber} Over |\n ${typeSummary} |\n ${bonusSummary}`;
   }
 
-  if ((stageNumber === 1 || stageNumber === 2) && startStage2Button) {
-    stageAdvanceLabel = stageNumber === 1 ? "Enter Stage 2" : "Enter Stage 3";
+  if ((stageNumber === 1 || stageNumber === 2 || stageNumber === 3) && startStage2Button) {
+    stageAdvanceLabel = stageNumber === 1
+      ? "Enter Stage 2"
+      : stageNumber === 2
+        ? "Enter Stage 3"
+        : "Enter Stage 4";
     startStage2Button.visible = true;
     startStage2Button.label = stageAdvanceLabel;
   }
@@ -192,6 +203,7 @@ function startStage2() {
   stageNumber = 2;
   stageEnded = false;
   stageResultText = "";
+  clearStageFloors();
   player.configureForStage(stageNumber);
   player.typesConsumed = [];
   timer.reset(30000);
@@ -206,6 +218,7 @@ function startStage3() {
   stageNumber = 3;
   stageEnded = false;
   stageResultText = "";
+  clearStageFloors();
   player.configureForStage(stageNumber);
   player.typesConsumed = [];
   timer.reset(30000);
@@ -213,6 +226,46 @@ function startStage3() {
   spawnEnemies(STAGE3_ENEMY_TYPE_KEYS);
   if (startStage2Button) {
     startStage2Button.visible = false;
+  }
+}
+
+function startStage4() {
+  stageNumber = 4;
+  stageEnded = false;
+  stageResultText = "";
+  clearEnemies();
+  clearStageFloors();
+  buildStage4Platforms();
+  player.configureForStage(stageNumber);
+  player.typesConsumed = [];
+  player.body.x = 120;
+  player.body.y = WORLD_HEIGHT - 180;
+  player.body.vel.x = 0;
+  player.body.vel.y = 0;
+  camera.x = player.body.x;
+  camera.y = player.body.y;
+  timer.reset(45000);
+  timer.start();
+  if (startStage2Button) {
+    startStage2Button.visible = false;
+  }
+}
+
+function applyDebugStartStage() {
+  if (DEBUG_START_STAGE == null || DEBUG_START_STAGE === 1) return;
+
+  if (DEBUG_START_STAGE === 2) {
+    startStage2();
+    return;
+  }
+
+  if (DEBUG_START_STAGE === 3) {
+    startStage3();
+    return;
+  }
+
+  if (DEBUG_START_STAGE === 4) {
+    startStage4();
   }
 }
 
@@ -239,11 +292,12 @@ function drawStageButtons() {
 
 function checkStageButtonPresses() {
   if (!startStage2Button || !startStage2Button.visible) return;
-  if (stageNumber !== 1 && stageNumber !== 2) return;
+  if (stageNumber !== 1 && stageNumber !== 2 && stageNumber !== 3) return;
 
   if (mouse.presses() && isStageButtonHovered()) {
     if (stageNumber === 1) startStage2();
     else if (stageNumber === 2) startStage3();
+    else if (stageNumber === 3) startStage4();
   }
 }
 
@@ -299,6 +353,30 @@ function drawWorldBounds() {
   strokeWeight(8);
   rect(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
   pop();
+}
+
+function clearStageFloors() {
+  if (!floorManager?.group) return;
+
+  for (const platform of floorManager.group) {
+    if (platform && !platform.removed) {
+      platform.remove();
+    }
+  }
+}
+
+function buildStage4Platforms() {
+  if (!floorManager) return;
+
+  floorManager.add(WORLD_WIDTH / 2, WORLD_HEIGHT - 18, WORLD_WIDTH, 36);
+  floorManager.add(330, WORLD_HEIGHT - 150, 220, 20);
+  floorManager.add(620, WORLD_HEIGHT - 260, 180, 20);
+  floorManager.add(960, WORLD_HEIGHT - 360, 240, 20);
+  floorManager.add(1320, WORLD_HEIGHT - 250, 170, 20);
+  floorManager.add(1620, WORLD_HEIGHT - 140, 260, 20);
+  floorManager.add(1940, WORLD_HEIGHT - 300, 180, 20);
+  floorManager.add(2260, WORLD_HEIGHT - 420, 240, 20);
+  floorManager.add(2580, WORLD_HEIGHT - 220, 220, 20);
 }
 
 function formatEvolutionBonuses(bonuses) {
