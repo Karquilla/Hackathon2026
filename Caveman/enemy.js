@@ -81,36 +81,35 @@ const ENEMY_FISH = {
         damage: 9,
         type: 'tank',
         speed: 4,
-        frame: 9, // Row 1, Pos 9
+        frame: 9,
     },
     fsh_purple: {
         health: 7,
         damage: 11,
         type: 'trickster',
         speed: 6,
-        frame: 11, // Row 1, Pos 11
+        frame: 11,
     },
     fsh_orange: {
         health: 6,
         damage: 12,
         type: 'berzerker',
         speed: 7,
-        frame: 10, // Row 2, Pos 9
+        frame: 10,
     },
     fsh_blue: {
         health: 9,
         damage: 7,
         type: 'range',
         speed: 5,
-        frame: 12, // Row 2, Pos 11
-        
+        frame: 12,
     },
     fsh_red: {
         health: 9,
         damage: 9,
         type: 'base',
         speed: 5,
-        frame: 7, // Row 3, Pos 9
+        frame: 7,
     }
 }
 
@@ -151,11 +150,11 @@ class Enemy {
                 org_red:     { x: 96,  y: 48, frames: 1, w: 16, h: 16 },
 
                 // Fish
-                fsh_green:   { x: 128, y: 16, frames: 1, w: 32, h: 16 },
-                fsh_purple:  { x: 160, y: 16, frames: 1, w: 32, h: 16 },
-                fsh_orange:  { x: 128, y: 32, frames: 1, w: 32, h: 16 },
-                fsh_blue:    { x: 160, y: 32, frames: 1, w: 32, h: 16 },
-                fsh_red:     { x: 128, y: 48, frames: 1, w: 32, h: 16 },
+                fsh_green:   { x: 0,  y: 80,  frames: 1, w: 32, h: 16 },
+                fsh_purple:  { x: 32, y: 80, frames: 1, w: 32, h: 16 },
+                fsh_orange:  { x: 0, y: 96, frames: 1, w: 32, h: 16 },
+                fsh_blue:    { x: 32,   y: 96,   frames: 1, w: 32, h: 16 },
+                fsh_red:     { x: 0,    y: 112,    frames: 1, w: 32, h: 16 },
             });
             
             this.body.ani = options.type || 'cell_green';
