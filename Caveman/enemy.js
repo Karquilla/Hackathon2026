@@ -81,36 +81,72 @@ const ENEMY_FISH = {
         damage: 9,
         type: 'tank',
         speed: 4,
-        frame: 9, // Row 1, Pos 9
+        frame: 9,
     },
     fsh_purple: {
         health: 7,
         damage: 11,
         type: 'trickster',
         speed: 6,
-        frame: 11, // Row 1, Pos 11
+        frame: 11,
     },
     fsh_orange: {
         health: 6,
         damage: 12,
         type: 'berzerker',
         speed: 7,
-        frame: 10, // Row 2, Pos 9
+        frame: 10,
     },
     fsh_blue: {
         health: 9,
         damage: 7,
         type: 'range',
         speed: 5,
-        frame: 12, // Row 2, Pos 11
-        
+        frame: 12,
     },
     fsh_red: {
         health: 9,
         damage: 9,
         type: 'base',
         speed: 5,
-        frame: 7, // Row 3, Pos 9
+        frame: 7,
+    }
+}
+const MAMMALS = {
+    mouse: {
+        health: 7,
+        damage: 9,
+        type: 'tank',
+        speed: 4,
+        frame: 9,
+    },
+    rabbit: {
+        health: 7,
+        damage: 11,
+        type: 'trickster',
+        speed: 6,
+        frame: 11,
+    },
+    fox: {
+        health: 6,
+        damage: 12,
+        type: 'berzerker',
+        speed: 7,
+        frame: 10,
+    },
+    panda: {
+        health: 9,
+        damage: 7,
+        type: 'range',
+        speed: 5,
+        frame: 12,
+    },
+    bear: {
+        health: 9,
+        damage: 9,
+        type: 'base',
+        speed: 5,
+        frame: 7,
     }
 }
 
@@ -151,11 +187,18 @@ class Enemy {
                 org_red:     { x: 96,  y: 48, frames: 1, w: 16, h: 16 },
 
                 // Fish
-                fsh_green:   { x: 128, y: 16, frames: 1, w: 32, h: 16 },
-                fsh_purple:  { x: 160, y: 16, frames: 1, w: 32, h: 16 },
-                fsh_orange:  { x: 128, y: 32, frames: 1, w: 32, h: 16 },
-                fsh_blue:    { x: 160, y: 32, frames: 1, w: 32, h: 16 },
-                fsh_red:     { x: 128, y: 48, frames: 1, w: 32, h: 16 },
+                fsh_green:   { x: 0,  y: 80,  frames: 1, w: 32, h: 16 },
+                fsh_purple:  { x: 32, y: 80, frames: 1, w: 32, h: 16 },
+                fsh_orange:  { x: 0, y: 96, frames: 1, w: 32, h: 16 },
+                fsh_blue:    { x: 32,   y: 96,   frames: 1, w: 32, h: 16 },
+                fsh_red:     { x: 0,    y: 112,    frames: 1, w: 32, h: 16 },
+
+                // Mammals
+                mouse:       { x: 0, y: 144, frames: 1, w: 32, h: 16 },
+                rabbit:      { x: 0, y: 144, frames: 1, w: 32, h: 16 },
+                fox:         { x: 0, y: 144, frames: 1, w: 32, h: 16 },
+                panda:       { x: 0, y: 144, frames: 1, w: 32, h: 16 },
+                bear:        { x: 0, y: 144, frames: 1, w: 32, h: 16 },
             });
             
             this.body.ani = options.type || 'cell_green';
@@ -165,14 +208,21 @@ class Enemy {
         this.body.rotationLock = true;
         this.body.direction = random(0, 360);
     }
-    update() {
+    update(worldBounds = null) {
         // If the sprite has been removed, don't update
         if (!this.body || this.body.removed) return;
 
+        const minX = worldBounds?.minX ?? 0;
+        const maxX = worldBounds?.maxX ?? width;
+        const minY = worldBounds?.minY ?? 0;
+        const maxY = worldBounds?.maxY ?? height;
+        const centerX = (minX + maxX) / 2;
+        const centerY = (minY + maxY) / 2;
+
         // If the enemy hits the edge, give it a new random direction
-        if (this.body.x < 0 || this.body.x > width || this.body.y < 0 || this.body.y > height) {
+        if (this.body.x < minX || this.body.x > maxX || this.body.y < minY || this.body.y > maxY) {
             // Move back toward the center slightly to avoid getting stuck
-            this.body.direction = this.body.angleTo(width / 2, height / 2) + random(-20, 20);
+            this.body.direction = this.body.angleTo(centerX, centerY) + random(-20, 20);
         }
 
         // Occasionally change direction randomly for more "organic" movement
