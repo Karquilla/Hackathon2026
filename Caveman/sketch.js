@@ -8,6 +8,7 @@ let stageEnded = false;
 let stageResultText = "";
 let stageNumber = 1;
 let startStage2Button;
+let stageAdvanceLabel = "";
 
 const BASE_WIDTH = 720;
 const BASE_HEIGHT = 480;
@@ -15,6 +16,7 @@ const CANVAS_PADDING = 16;
 const ENEMY_COUNT = 10;
 const STAGE1_ENEMY_TYPE_KEYS = ["cell_green", "cell_blue", "cell_red", "cell_orange", "cell_purple"];
 const STAGE2_ENEMY_TYPE_KEYS = ["org_green", "org_blue", "org_red", "org_orange", "org_purple"];
+const STAGE3_ENEMY_TYPE_KEYS = ["fsh_green", "fsh_blue", "fsh_red", "fsh_orange", "fsh_purple"];
 
 function preload() {
   // Load the image directly. We'll define the frame size in the Enemy class.
@@ -42,6 +44,8 @@ function setup() {
   //   bgFrames: [{ x: 0, y: 0 }, { x: 1, y: 0 }],
   //   fillFrames: [{ x: 0, y: 1 }, { x: 1, y: 1 }]
   // });
+  // Use border tile coordinates configured in UI.js.
+  setHUDBorderTiles(enemyImage);
 
   spawnEnemies(STAGE1_ENEMY_TYPE_KEYS);
 }
@@ -66,7 +70,7 @@ function draw() {
 
   camera.off();
 
-  drawHUD(timer.getRemainingTime() / 1000, uiHudSheet);
+  drawHUD(timer.getRemainingTime() / 1000, timer.duration / 1000, uiHudSheet, enemyImage);
 
   if (stageEnded) {
     drawStageEndOverlay();
@@ -114,7 +118,8 @@ function endStage() {
 
   stageResultText = `Stage ${stageNumber} Over |\n ${typeSummary} |\n ${bonusSummary}`;
 
-  if (stageNumber === 1 && startStage2Button) {
+  if ((stageNumber === 1 || stageNumber === 2) && startStage2Button) {
+    stageAdvanceLabel = stageNumber === 1 ? "Enter Stage 2" : "Enter Stage 3";
     startStage2Button.visible = true;
     startStage2Button.collider = "static";
   }
@@ -186,6 +191,20 @@ function startStage2() {
   }
 }
 
+function startStage3() {
+  stageNumber = 3;
+  stageEnded = false;
+  stageResultText = "";
+  player.typesConsumed = [];
+  timer.reset(30000);
+  timer.start();
+  spawnEnemies(STAGE3_ENEMY_TYPE_KEYS);
+  if (startStage2Button) {
+    startStage2Button.visible = false;
+    startStage2Button.collider = "none";
+  }
+}
+
 function drawStageButtons() {
   if (!startStage2Button || !startStage2Button.visible) return;
 
@@ -193,16 +212,17 @@ function drawStageButtons() {
   textAlign(CENTER, CENTER);
   textSize(18);
   fill(255);
-  text("Enter Stage 2", startStage2Button.x, startStage2Button.y + 1);
+  text(stageAdvanceLabel || "Enter Stage", startStage2Button.x, startStage2Button.y + 1);
   pop();
 }
 
 function checkStageButtonPresses() {
   if (!startStage2Button || !startStage2Button.visible) return;
-  if (stageNumber !== 1) return;
+  if (stageNumber !== 1 && stageNumber !== 2) return;
 
   // p5play input check on sprite button.
   if (startStage2Button.mouse.pressed("left")) {
-    startStage2();
+    if (stageNumber === 1) startStage2();
+    else if (stageNumber === 2) startStage3();
   }
 }
