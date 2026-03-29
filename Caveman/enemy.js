@@ -150,6 +150,44 @@ const MAMMALS = {
     }
 }
 
+const HUMANS = {
+    man_green: {
+        health: 10,
+        damage: 10,
+        type: 'tank',
+        speed: 4,
+        frame: 0,
+    },
+    man_blue: {
+        health: 9,
+        damage: 8,
+        type: 'range',
+        speed: 5,
+        frame: 1,
+    },
+    man_red: {
+        health: 9,
+        damage: 10,
+        type: 'base',
+        speed: 5,
+        frame: 2,
+    },
+    man_orange: {
+        health: 8,
+        damage: 12,
+        type: 'berzerker',
+        speed: 6,
+        frame: 3,
+    },
+    man_purple: {
+        health: 8,
+        damage: 11,
+        type: 'trickster',
+        speed: 6,
+        frame: 4,
+    }
+}
+
 class Enemy {
     constructor(x, y, w = 20, h = 20, options = {}) {
         // If a group is provided, create the sprite within it
@@ -159,7 +197,7 @@ class Enemy {
             this.body = new Sprite(x, y, w, h);
         }
 
-        const typeData = ENEMY_CELL[options.type] || ENEMY_ORGANISM[options.type] || ENEMY_FISH[options.type] || MAMMALS[options.type] || {};
+        const typeData = ENEMY_CELL[options.type] || ENEMY_ORGANISM[options.type] || ENEMY_FISH[options.type] || MAMMALS[options.type] || HUMANS[options.type] || {};
         this.body.enemyType = typeData.type || options.type || 'basic'; // explicitly set for player.js
         this.body.type = options.type || 'basic';
         this.body.enemyData = typeData; // Attach the full data object to the sprite
@@ -206,6 +244,13 @@ class Enemy {
                 fox:         { x: 112, y: 112, frames: 1, w: 32, h: 16 },
                 panda:       { x: 144, y: 112, frames: 1, w: 32, h: 16 },
                 bear:        { x: 112, y: 144, frames: 1, w: 32, h: 16 },
+
+                // Stage 5 humans
+                man_green:   { x: 16, y: 208, frames: 1, w: 16, h: 32 },
+                man_blue:    { x: 80, y: 208, frames: 1, w: 16, h: 32 },
+                man_red:     { x: 160, y: 208, frames: 1, w: 16, h: 32 },
+                man_orange:  { x: 160, y: 241, frames: 1, w: 16, h: 32 },
+                man_purple:  { x: 80, y: 241, frames: 1, w: 16, h: 32 },
             });
             
             this.body.ani = options.type || 'cell_green';
