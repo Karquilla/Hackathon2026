@@ -168,6 +168,12 @@ class Enemy {
         this.body.speed = options.speed || (typeData.speed || 2);
         this.body.color = options.color || 'red';
         this.movementMode = options.movementMode || "topdown";
+        this.platformSpeed = this.body.speed;
+        this.body.enemySize = max(
+            this.body.d ?? 0,
+            this.body.w ?? this.body.width ?? 0,
+            this.body.h ?? this.body.height ?? 0
+        );
 
         // Add spritesheet handling
         if (options.spriteSheetImage) {
@@ -207,11 +213,14 @@ class Enemy {
         
         // Random movement setup
         this.body.rotationLock = true;
+        this.body.friction = 0;
         if (this.movementMode === "topdown") {
             this.body.direction = random(0, 360);
         } else {
             // Platformer mode: only move left or right
             this.body.direction = random([0, 180]);
+            this.body.vel.x = this.body.direction === 0 ? this.platformSpeed : -this.platformSpeed;
+            this.body.vel.y = 0;
         }
     }
     update(worldBounds = null, floors = null) {
@@ -230,10 +239,15 @@ class Enemy {
             this.body.vel.y += 0.7; // matches player gravity
             if (floors) {
                 this.body.collides(floors);
+                if (this.body.colliding(floors) > 0 && this.body.vel.y > 0) {
+                    this.body.vel.y = 0;
+                }
             }
             
             // Limit fall speed
             if (this.body.vel.y > 14) this.body.vel.y = 14;
+
+            this.body.vel.x = this.body.direction === 0 ? this.platformSpeed : -this.platformSpeed;
 
             // Turn around at world edges
             if (this.body.x < minX + 20) {
@@ -247,6 +261,11 @@ class Enemy {
             // Occasionally change direction
             if (random(100) < 0.5) {
                 this.body.direction = (this.body.direction === 0) ? 180 : 0;
+            }
+
+            if (floors && this.body.colliding(floors) > 0 && abs(this.body.vel.x) < 0.1) {
+                this.body.direction = (this.body.direction === 0) ? 180 : 0;
+                this.body.vel.x = this.body.direction === 0 ? this.platformSpeed : -this.platformSpeed;
             }
         } else {
             // Topdown movement logic

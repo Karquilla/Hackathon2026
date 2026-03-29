@@ -51,7 +51,7 @@ function getAnimatedFrame(frames, fps) {
   return safeFrames[frameIndex];
 }
 
-function drawHUD(time, maxTime, uiTileSheet = null, borderSheet = null) {
+function drawHUD(time, maxTime, uiTileSheet = null, borderSheet = null, player = null) {
   fill(0);
   textSize(24);
   text(`Time to Evolve: ${time}`, 20, 30);
@@ -98,6 +98,24 @@ function drawHUD(time, maxTime, uiTileSheet = null, borderSheet = null) {
 
   const activeBorderSheet = borderSheet ?? hudBorderSheet;
   drawHUDBorder(barX, barY, barW, barH, activeBorderSheet);
+
+  if (player) {
+    drawPlayerStats(player, barX, barY + barH + 28);
+  }
+}
+
+function drawPlayerStats(player, x, y) {
+  const currentHealth = max(0, ceil(player.health ?? 0));
+  const maxHealth = max(1, ceil(player.maxHealth ?? 1));
+  const grappleShots = max(0, player.rangeShots ?? 0);
+
+  push();
+  fill(0);
+  textAlign(LEFT, TOP);
+  textSize(20);
+  text(`Health: ${currentHealth}/${maxHealth}`, x, y);
+  text(`Grapple Shots: ${grappleShots}`, x, y + 24);
+  pop();
 }
 
 function drawHUDBorder(x, y, w, h, sheet) {

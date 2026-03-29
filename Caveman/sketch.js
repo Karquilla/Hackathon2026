@@ -3,12 +3,16 @@ let enemiesGroup;
 let enemies = []; // Array to store Enemy instances for updating
 let enemyImage;
 let uiHudSheet = null;
+let backgroundImages = {};
+let currentStageBackgroundLayers = [];
 let timer;
 let floorManager;
 let stageEnded = false;
+let gameOver = false;
 let stageResultText = "";
 let stageNumber = 1;
 let startStage2Button;
+let restartButton;
 let stageAdvanceLabel = "";
 
 const CANVAS_WIDTH = 1280;
@@ -20,15 +24,39 @@ const ENEMY_COUNT = 40;
 const CAMERA_ZOOM = 1.8;
 const CAMERA_EDGE_BUFFER_X = 170;
 const CAMERA_EDGE_BUFFER_Y = 110;
-const DEBUG_START_STAGE = 4; // Set to 1, 2, 3, or 4 to jump directly into that stage.
+const DEBUG_START_STAGE = null; // Set to 1, 2, 3, or 4 to jump directly into that stage.
 const STAGE1_ENEMY_TYPE_KEYS = ["cell_green", "cell_blue", "cell_red", "cell_orange", "cell_purple"];
 const STAGE2_ENEMY_TYPE_KEYS = ["org_green", "org_blue", "org_red", "org_orange", "org_purple"];
 const STAGE3_ENEMY_TYPE_KEYS = ["fsh_green", "fsh_blue", "fsh_red", "fsh_orange", "fsh_purple"];
 const STAGE4_ENEMY_TYPE_KEYS = ["rat", "rabbit", "fox", "panda", "bear"];
+const PLAYER_STAGE_APPEARANCES = {
+  1: { x: 0, y: 32, w: 16, h: 16 },
+  2: { x: 192, y: 16, w: 16, h: 16 },
+  3: { x: 256, y: 48, w: 32, h: 16 },
+  4: { x: 112, y: 144, w: 32, h: 16 },
+  default: { x: 0, y: 32, w: 16, h: 16 }
+};
+const PLAYER_STAGE_SIZE_RETAIN = 0.8;
+const ENEMY_SIZE_VARIANCE = {
+  1: { min: 0.8, max: 1.25 },
+  2: { min: 0.85, max: 1.3 },
+  3: { min: 0.7, max: 1.55 },
+  4: { min: 0.65, max: 1.6 }
+};
 
 function preload() {
   // Load the image directly. We'll define the frame size in the Enemy class.
   enemyImage = loadImage("assets/primalAscentAnimations.png");
+  backgroundImages = {
+    3: [
+      loadImage("assets/backLevelOne.png"),
+      loadImage("assets/backLevelOneP2.png")
+    ],
+    4: [
+      loadImage("assets/backLevelTwo.png"),
+      loadImage("assets/backLevelTwoP2.png")
+    ]
+  };
   // Uncomment when your HUD sheet is ready:
   // uiHudSheet = loadImage("assets/ui-hud-sheet.png");
 }
@@ -40,24 +68,20 @@ function setup() {
   timer.start();
 
   enemiesGroup = new Group();
-  floorManager = new Floor({ spriteSheetImage: enemyImage });
+  floorManager = new Floor({ spriteSheetImage: enemyImage, platformTiles: {
+    left:   { x: 0,  y: 304, w: 16, h: 16 },
+    center: { x: 32,  y: 336, w: 16, h: 16 },
+    right:  { x: 32, y: 304, w: 16, h: 16 }
+  } });
 
-  player = new Player(120, 260, 16, 24);
-  player.configureForStage(stageNumber);
+  player = createPlayerForStage(stageNumber);
+  setStageBackground(stageNumber);
   camera.zoom = CAMERA_ZOOM;
   camera.x = player.body.x;
   camera.y = player.body.y;
   createStageButtons();
+  createRestartButton();
 
-  // Uncomment and set frame coordinates when your HUD sheet is ready.
-  // setHUDTileSheet(uiHudSheet, {
-  //   tileWidth: 16,
-  //   tileHeight: 16,
-  //   animFps: 8,
-  //   bgFrames: [{ x: 0, y: 0 }, { x: 1, y: 0 }],
-  //   fillFrames: [{ x: 0, y: 1 }, { x: 1, y: 1 }]
-  // });
-  // Use border tile coordinates configured in UI.js.
   setHUDBorderTiles(enemyImage);
 
   spawnEnemies(STAGE1_ENEMY_TYPE_KEYS);
@@ -65,9 +89,9 @@ function setup() {
 }
 
 function draw() {
-  background("#555555");
+  drawStageBackground();
 
-  if (!stageEnded && timer.isFinished()) {
+  if (!stageEnded && !gameOver && timer.isFinished()) {
     endStage();
   }
 
@@ -75,18 +99,21 @@ function draw() {
 
   drawWorldBounds();
 
-  if (!stageEnded) {
+  if (!stageEnded && !gameOver) {
     const activeEnemies = enemiesGroup;
     const activeFloors = stageNumber >= 4 ? floorManager?.group : null;
 
     player.update(activeEnemies, { minX: 0, minY: 0, maxX: WORLD_WIDTH, maxY: WORLD_HEIGHT }, activeFloors);
+    checkGameOver();
 
     // Update each enemy instance
-    for (let enemy of enemies) {
-      enemy.update(
-        { minX: 0, minY: 0, maxX: WORLD_WIDTH, maxY: WORLD_HEIGHT },
-        activeFloors
-      );
+    if (!gameOver) {
+      for (let enemy of enemies) {
+        enemy.update(
+          { minX: 0, minY: 0, maxX: WORLD_WIDTH, maxY: WORLD_HEIGHT },
+          activeFloors
+        );
+      }
     }
   }
 
@@ -94,9 +121,13 @@ function draw() {
 
   camera.off();
 
-  drawHUD(timer.getRemainingTime() / 1000, timer.duration / 1000, uiHudSheet, enemyImage);
+  drawHUD(timer.getRemainingTime() / 1000, timer.duration / 1000, uiHudSheet, enemyImage, player);
 
-  if (stageEnded) {
+  if (gameOver) {
+    drawGameOverOverlay();
+    drawRestartButton();
+    checkRestartButtonPresses();
+  } else if (stageEnded) {
     drawStageEndOverlay();
     drawStageButtons();
     checkStageButtonPresses();
@@ -169,6 +200,8 @@ function spawnEnemies(typeKeys) {
 
   for (let i = 0; i < ENEMY_COUNT; i++) {
     const selectedType = random(typeKeys);
+    const sizeVariance = getEnemySizeVariance(stageNumber);
+    const sizeMultiplier = random(sizeVariance.min, sizeVariance.max);
 
     let ew = 16;
     let eh = 16;
@@ -176,6 +209,9 @@ function spawnEnemies(typeKeys) {
     if (isStage4) {
       ew = 32;
     }
+
+    ew = max(12, round(ew * sizeMultiplier));
+    eh = max(12, round(eh * sizeMultiplier));
 
     let x, y;
 
@@ -235,11 +271,27 @@ function createStageButtons() {
   };
 }
 
+function createRestartButton() {
+  restartButton = {
+    x: width / 2,
+    y: height - 96,
+    w: 220,
+    h: 40,
+    visible: false,
+    label: "Restart Run",
+    fill: "#bf4343",
+    stroke: "#ffe0e0"
+  };
+}
+
 function startStage2() {
   stageNumber = 2;
+  setStageBackground(stageNumber);
   stageEnded = false;
+  gameOver = false;
   stageResultText = "";
   clearStageFloors();
+  player.reduceSizeBetweenStages(PLAYER_STAGE_SIZE_RETAIN);
   player.configureForStage(stageNumber);
   player.typesConsumed = [];
   timer.reset(30000);
@@ -252,9 +304,12 @@ function startStage2() {
 
 function startStage3() {
   stageNumber = 3;
+  setStageBackground(stageNumber);
   stageEnded = false;
+  gameOver = false;
   stageResultText = "";
   clearStageFloors();
+  player.reduceSizeBetweenStages(PLAYER_STAGE_SIZE_RETAIN);
   player.configureForStage(stageNumber);
   player.typesConsumed = [];
   timer.reset(30000);
@@ -267,11 +322,14 @@ function startStage3() {
 
 function startStage4() {
   stageNumber = 4;
+  setStageBackground(stageNumber);
   stageEnded = false;
+  gameOver = false;
   stageResultText = "";
   clearEnemies();
   clearStageFloors();
   buildStage4Platforms();
+  player.reduceSizeBetweenStages(PLAYER_STAGE_SIZE_RETAIN);
   player.configureForStage(stageNumber);
   player.typesConsumed = [];
   player.body.x = 120;
@@ -327,6 +385,27 @@ function drawStageButtons() {
   pop();
 }
 
+function drawRestartButton() {
+  if (!restartButton || !restartButton.visible) return;
+
+  push();
+  restartButton.x = width / 2;
+  restartButton.y = height - 96;
+
+  rectMode(CENTER);
+  stroke(restartButton.stroke);
+  strokeWeight(2);
+  fill(isRestartButtonHovered() ? "#d45454" : restartButton.fill);
+  rect(restartButton.x, restartButton.y, restartButton.w, restartButton.h, 10);
+
+  noStroke();
+  textAlign(CENTER, CENTER);
+  textSize(18);
+  fill(255);
+  text(restartButton.label, restartButton.x, restartButton.y + 1);
+  pop();
+}
+
 function checkStageButtonPresses() {
   if (!startStage2Button || !startStage2Button.visible) return;
   if (stageNumber !== 1 && stageNumber !== 2 && stageNumber !== 3) return;
@@ -335,6 +414,14 @@ function checkStageButtonPresses() {
     if (stageNumber === 1) startStage2();
     else if (stageNumber === 2) startStage3();
     else if (stageNumber === 3) startStage4();
+  }
+}
+
+function checkRestartButtonPresses() {
+  if (!restartButton || !restartButton.visible) return;
+
+  if (mouse.presses() && isRestartButtonHovered()) {
+    restartGame();
   }
 }
 
@@ -348,6 +435,19 @@ function isStageButtonHovered() {
     mouseX <= startStage2Button.x + halfW &&
     mouseY >= startStage2Button.y - halfH &&
     mouseY <= startStage2Button.y + halfH
+  );
+}
+
+function isRestartButtonHovered() {
+  if (!restartButton?.visible) return false;
+
+  const halfW = restartButton.w / 2;
+  const halfH = restartButton.h / 2;
+  return (
+    mouseX >= restartButton.x - halfW &&
+    mouseX <= restartButton.x + halfW &&
+    mouseY >= restartButton.y - halfH &&
+    mouseY <= restartButton.y + halfH
   );
 }
 
@@ -417,6 +517,27 @@ function buildStage4Platforms() {
   floorManager.add(2580, WORLD_HEIGHT - 220 + platformDrop, 220, 20);
 }
 
+function setStageBackground(stage) {
+  currentStageBackgroundLayers = backgroundImages[stage] ?? [];
+}
+
+function drawStageBackground() {
+  background("#555555");
+
+  if (!currentStageBackgroundLayers.length) return;
+
+  push();
+  imageMode(CORNER);
+  noSmooth();
+
+  for (const layer of currentStageBackgroundLayers) {
+    if (!layer) continue;
+    image(layer, 0, 0, width, height);
+  }
+
+  pop();
+}
+
 function formatEvolutionBonuses(bonuses) {
   const summary = [];
 
@@ -431,4 +552,83 @@ function formatEvolutionBonuses(bonuses) {
 
 function formatBonusValue(value) {
   return Number.isInteger(value) ? value : value.toFixed(2);
+}
+
+function getEnemySizeVariance(stage) {
+  return ENEMY_SIZE_VARIANCE[stage] ?? { min: 0.9, max: 1.1 };
+}
+
+function createPlayerForStage(stage) {
+  const nextPlayer = new Player(120, 260, 16, 24, {
+    spriteSheetImage: enemyImage,
+    stageAppearances: PLAYER_STAGE_APPEARANCES
+  });
+  nextPlayer.configureForStage(stage);
+  return nextPlayer;
+}
+
+function checkGameOver() {
+  if (!player || gameOver || player.health > 0) return;
+
+  gameOver = true;
+  stageEnded = false;
+  timer.pause();
+  stageResultText = `Game Over |\n Stage ${stageNumber} failed |\n Click restart to try again`;
+
+  if (startStage2Button) {
+    startStage2Button.visible = false;
+  }
+
+  if (restartButton) {
+    restartButton.visible = true;
+  }
+}
+
+function drawGameOverOverlay() {
+  push();
+  noStroke();
+  fill(40, 0, 0, 185);
+  rect(0, 0, width, height);
+
+  textAlign(CENTER, CENTER);
+  fill(255);
+  textSize(36);
+  text("Game Over", width / 2, height / 2 - 44);
+
+  textSize(22);
+  text(`Reached 0 HP on Stage ${stageNumber}`, width / 2, height / 2);
+
+  textSize(18);
+  text("Press restart to begin again", width / 2, height / 2 + 36);
+  pop();
+}
+
+function restartGame() {
+  gameOver = false;
+  stageEnded = false;
+  stageResultText = "";
+  stageNumber = 1;
+  setStageBackground(stageNumber);
+  clearEnemies();
+  clearStageFloors();
+
+  if (player?.body && !player.body.removed) {
+    player.body.remove();
+  }
+
+  player = createPlayerForStage(stageNumber);
+  camera.x = player.body.x;
+  camera.y = player.body.y;
+  timer.reset(10000);
+  timer.start();
+  spawnEnemies(STAGE1_ENEMY_TYPE_KEYS);
+
+  if (startStage2Button) {
+    startStage2Button.visible = false;
+    startStage2Button.label = "Enter Stage 2";
+  }
+
+  if (restartButton) {
+    restartButton.visible = false;
+  }
 }

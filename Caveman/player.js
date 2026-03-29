@@ -1,11 +1,15 @@
 class Player {
-  constructor(x, y, w, h) {
+  constructor(x, y, w, h, options = {}) {
     this.body = new Sprite(x, y, w, h);
     this.body.color = "#00ef00";
     this.body.rotationLock = true;
+    this.baseWidth = w;
+    this.baseHeight = h;
+    this.spriteSheetImage = options.spriteSheetImage ?? null;
+    this.stageAppearances = options.stageAppearances ?? {};
     this.speed = 5;
     this.movementMode = "topdown";
-    this.jumpStrength = 14;
+    this.jumpStrength = 12;
     this.gravity = 0.7;
     this.maxFallSpeed = 14;
     this.isGrounded = false;
@@ -20,6 +24,8 @@ class Player {
     this.lastGrappleAt = -99999;
     this.grappleCooldownMs = 250;
     this.minGrappleCooldownMs = 90;
+    this.lastDamageAt = -99999;
+    this.contactDamageCooldownMs = 500;
     this.evolutionType = "base";
     this.typesConsumed = [];
     this.foodConsumed = 0;
@@ -31,6 +37,8 @@ class Player {
       grapplePull: 0,
       cooldownReductionMs: 0
     };
+
+    this.setupStageAppearances();
   }
 
   move() {
@@ -85,6 +93,8 @@ class Player {
   }
 
   configureForStage(stageNumber) {
+    this.applyStageAppearance(stageNumber);
+
     if (stageNumber >= 4) {
       this.setMovementMode("platformer");
       return;
@@ -98,15 +108,57 @@ class Player {
 
     if (mode === "platformer") {
       this.body.rotationLock = true;
+      this.body.friction = 0;
       this.body.vel.x = 0;
+      this.body.vel.y = 0;
       this.isGrounded = false;
       return;
     }
 
     this.body.rotationLock = true;
+    this.body.friction = 0;
     this.body.vel.x = 0;
     this.body.vel.y = 0;
     this.isGrounded = false;
+  }
+
+  setupStageAppearances() {
+    if (!this.spriteSheetImage) return;
+
+    this.body.spriteSheet = this.spriteSheetImage;
+    const anis = {};
+
+    for (const [stage, frame] of Object.entries(this.stageAppearances)) {
+      if (!frame) continue;
+
+      anis[`player_stage_${stage}`] = {
+        x: frame.x,
+        y: frame.y,
+        frames: 1,
+        w: frame.w ?? this.baseWidth,
+        h: frame.h ?? this.baseHeight
+      };
+    }
+
+    if (Object.keys(anis).length > 0) {
+      this.body.addAnis(anis);
+    }
+  }
+
+  applyStageAppearance(stageNumber) {
+    if (!this.spriteSheetImage) return;
+
+    const stageFrame = this.stageAppearances[stageNumber] ?? this.stageAppearances.default;
+    const aniName = `player_stage_${stageNumber}`;
+
+    if (stageFrame && this.body.anis?.[aniName]) {
+      this.body.ani = aniName;
+      return;
+    }
+
+    if (this.stageAppearances.default && this.body.anis?.player_stage_default) {
+      this.body.ani = "player_stage_default";
+    }
   }
 
   update(enemies, worldBounds = null, floors = null) {
@@ -116,9 +168,9 @@ class Player {
     if (enemies) {
       this.tryFireGrapple(enemies);
       this.updateGrapplePull();
-      this.resolveEnvironment(worldBounds, floors);
 
       this.body.overlaps(enemies, (_playerCollider, enemyCollider) => {
+        const playerSize = this.getCombatSize();
         const enemyType = String(
           enemyCollider.enemyData?.type ??
           enemyCollider.enemyTypeClass ??
@@ -126,19 +178,14 @@ class Player {
           enemyCollider.type ??
           "unknown"
         ).toLowerCase();
-        const enemySize = enemyCollider.d ?? max(enemyCollider.w ?? 0, enemyCollider.h ?? 0);
+        const enemySize = this.getEnemyCombatSize(enemyCollider);
 
-        this.typesConsumed.push(enemyType);
-        this.foodConsumed += 1;
-        this.currentSize = max(this.currentSize, enemySize);
-        this.grow();
-
-        enemyCollider.remove();
-
-        if (this.grappleTarget === enemyCollider) {
-          this.grappleTarget = null;
-          this.grappleFramesLeft = 0;
+        if (playerSize >= enemySize) {
+          this.consumeEnemy(enemyCollider, enemyType, enemySize);
+          return;
         }
+
+        this.takeContactDamage(enemyCollider.damage ?? enemyCollider.enemyData?.damage ?? 1);
       });
     }
   }
@@ -149,6 +196,10 @@ class Player {
     if (this.movementMode === "platformer" && floors) {
       this.body.collides(floors);
       this.isGrounded = this.body.colliding(floors) > 0;
+
+      if (this.isGrounded && this.body.vel.y > 0) {
+        this.body.vel.y = 0;
+      }
     }
   }
 
@@ -268,6 +319,59 @@ class Player {
     if (typeof this.body.h === "number") this.body.h += 4;
     if (typeof this.body.width === "number") this.body.width += 4;
     if (typeof this.body.height === "number") this.body.height += 4;
+  }
+
+  reduceSizeBetweenStages(retainPercent = 0.8) {
+    const safeRetainPercent = constrain(retainPercent, 0.1, 1);
+    const currentWidth = this.body.w ?? this.body.width ?? this.baseWidth;
+    const currentHeight = this.body.h ?? this.body.height ?? this.baseHeight;
+    const nextWidth = max(this.baseWidth, round(currentWidth * safeRetainPercent));
+    const nextHeight = max(this.baseHeight, round(currentHeight * safeRetainPercent));
+
+    if (typeof this.body.w === "number") this.body.w = nextWidth;
+    if (typeof this.body.h === "number") this.body.h = nextHeight;
+    if (typeof this.body.width === "number") this.body.width = nextWidth;
+    if (typeof this.body.height === "number") this.body.height = nextHeight;
+
+    this.currentSize = max(this.currentSize * safeRetainPercent, 0);
+  }
+
+  getCombatSize() {
+    return max(
+      this.body.d ?? 0,
+      this.body.w ?? this.body.width ?? 0,
+      this.body.h ?? this.body.height ?? 0
+    );
+  }
+
+  getEnemyCombatSize(enemyCollider) {
+    return max(
+      enemyCollider.enemySize ?? 0,
+      enemyCollider.d ?? 0,
+      enemyCollider.w ?? enemyCollider.width ?? 0,
+      enemyCollider.h ?? enemyCollider.height ?? 0
+    );
+  }
+
+  consumeEnemy(enemyCollider, enemyType, enemySize) {
+    this.typesConsumed.push(enemyType);
+    this.foodConsumed += 1;
+    this.currentSize = max(this.currentSize, enemySize);
+    this.grow();
+
+    enemyCollider.remove();
+
+    if (this.grappleTarget === enemyCollider) {
+      this.grappleTarget = null;
+      this.grappleFramesLeft = 0;
+    }
+  }
+
+  takeContactDamage(amount) {
+    if (millis() - this.lastDamageAt < this.contactDamageCooldownMs) return;
+
+    this.lastDamageAt = millis();
+    this.health = max(0, this.health - amount);
   }
 
   evolveFromConsumedTypes() {
