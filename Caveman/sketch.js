@@ -27,15 +27,14 @@ function setup() {
   player = new Player(120, 260, 36, 48);
 
   for (let i = 0; i < ENEMY_COUNT; i++) {
+    let type = random(Object.keys(ENEMY_CELL));
     let enemyInstance = new Enemy(
       random(100, BASE_WIDTH - 100), 
       random(100, BASE_HEIGHT - 100), 
       16, 16, 
       { 
         group: enemiesGroup, 
-        health: 10, 
-        damage: 3, 
-        speed: random(1, 3),
+        type: type,
         spriteSheetImage: enemyImage
       }
     );

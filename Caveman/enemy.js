@@ -1,4 +1,4 @@
-const ENEMY_TYPE = {
+const ENEMY_CELL = {
     cell_green: {
         health: 3,
         damage: 5,
@@ -33,7 +33,47 @@ const ENEMY_TYPE = {
         type: 'trickster',
         speed: 2,
         frame: 4, // Row 3, Pos 1
+    }
+}
+const ENEMY_ORGANISM = {
+    org_green: {
+        health: 5,
+        damage: 7,
+        type: 'tank',
+        speed: .5,
+        frame: 5, // Row 1, Pos 5
     },
+    org_purple: {
+        health: 5,
+        damage: 9,
+        type: 'trickster',
+        speed: 4,
+        frame: 6, // Row 1, Pos 6
+    },
+    org_orange: {
+        health: 4,
+        damage: 10,
+        type: 'berzerker',
+        speed: 5,
+        frame: 7, // Row 1, Pos 7
+    },
+    org_blue: {
+        health: 7,
+        damage: 5,
+        type: 'range',
+        speed: 3,
+        frame: 3, // Row 3, Pos 5
+        
+    },
+    org_red: {
+        health: 7,
+        damage: 7,
+        type: 'base',
+        speed: 3,
+        frame: 5, // Row 3, Pos 7
+
+    }
+
 }
 
 class Enemy {
@@ -45,8 +85,8 @@ class Enemy {
             this.body = new Sprite(x, y, w, h);
         }
 
-        const typeData = ENEMY_TYPE[options.type] || {};
-        this.body.enemyType = options.type || 'basic'; // explicitly set for player.js
+        const typeData = ENEMY_CELL[options.type] || {};
+        this.body.enemyType = typeData.type || options.type || 'basic'; // explicitly set for player.js
         this.body.type = options.type || 'basic';
         this.body.enemyData = typeData; // Attach the full data object to the sprite
         this.body.health = options.health !== undefined ? options.health : (typeData.health || 100);
@@ -56,22 +96,22 @@ class Enemy {
 
         // Add spritesheet handling
         if (options.spriteSheetImage) {
-            // Use the frame assigned to the type, or a random one if type is unknown
-            let frameIndex = typeData.frame !== undefined ? typeData.frame : floor(random(5));
-            
-            // Add a static animation using these 5 frames across 3 rows
-            this.body.addAni('idle', options.spriteSheetImage, {
-                w: 16,
-                h: 16,
-                frames: [
-                    [0, 1], [1, 1], // Row 1 (green, blue)
-                    [0, 2], [1, 2], // Row 2 (red, orange)
-                    [0, 3]          // Row 3 (purple)
-                ]
+            this.body.spriteSheet = options.spriteSheetImage;
+            this.body.addAnis({
+                cell_green:  { row: 1, col: 0, frames: 1, w: 16, h: 16 },
+                cell_blue:   { row: 1, col: 1, frames: 1, w: 16, h: 16 },
+                cell_red:    { row: 2, col: 0, frames: 1, w: 16, h: 16 },
+                cell_orange: { row: 2, col: 1, frames: 1, w: 16, h: 16 },
+                cell_purple: { row: 3, col: 0, frames: 1, w: 16, h: 16 },
+
+                org_green:   { row: 0, col: 4, frames: 1, w: 16, h: 16 },
+                org_purple:  { row: 0, col: 5, frames: 1, w: 16, h: 32 },
+                org_orange:  { row: 0, col: 6, frames: 1, w: 16, h: 32 },
+                org_blue:    { row: 2, col: 4, frames: 1, w: 32, h: 16 },
+                org_red:     { row: 2, col: 6, frames: 1, w: 16, h: 16 },
             });
-            this.body.ani = 'idle';
-            this.body.ani.frame = frameIndex;
-            this.body.ani.stop();
+            
+            this.body.ani = options.type || 'cell_green';
         }
         
         // Random movement setup
@@ -79,6 +119,9 @@ class Enemy {
         this.body.direction = random(0, 360);
     }
     update() {
+        // If the sprite has been removed, don't update
+        if (!this.body || this.body.removed) return;
+
         // If the enemy hits the edge, give it a new random direction
         if (this.body.x < 0 || this.body.x > width || this.body.y < 0 || this.body.y > height) {
             // Move back toward the center slightly to avoid getting stuck
