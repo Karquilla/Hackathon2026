@@ -165,14 +165,21 @@ class Enemy {
         this.body.rotationLock = true;
         this.body.direction = random(0, 360);
     }
-    update() {
+    update(worldBounds = null) {
         // If the sprite has been removed, don't update
         if (!this.body || this.body.removed) return;
 
+        const minX = worldBounds?.minX ?? 0;
+        const maxX = worldBounds?.maxX ?? width;
+        const minY = worldBounds?.minY ?? 0;
+        const maxY = worldBounds?.maxY ?? height;
+        const centerX = (minX + maxX) / 2;
+        const centerY = (minY + maxY) / 2;
+
         // If the enemy hits the edge, give it a new random direction
-        if (this.body.x < 0 || this.body.x > width || this.body.y < 0 || this.body.y > height) {
+        if (this.body.x < minX || this.body.x > maxX || this.body.y < minY || this.body.y > maxY) {
             // Move back toward the center slightly to avoid getting stuck
-            this.body.direction = this.body.angleTo(width / 2, height / 2) + random(-20, 20);
+            this.body.direction = this.body.angleTo(centerX, centerY) + random(-20, 20);
         }
 
         // Occasionally change direction randomly for more "organic" movement
