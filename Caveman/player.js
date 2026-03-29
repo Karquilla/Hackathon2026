@@ -49,7 +49,13 @@ class Player {
     this.updateGrapplePull();
 
     this.body.overlaps(enemies, (_playerCollider, enemyCollider) => {
-      const enemyType = String(enemyCollider.enemyType ?? enemyCollider.type ?? "unknown").toLowerCase();
+      const enemyType = String(
+        enemyCollider.enemyData?.type ??
+        enemyCollider.enemyTypeClass ??
+        enemyCollider.enemyArchetype ??
+        enemyCollider.type ??
+        "unknown"
+      ).toLowerCase();
       const enemySize = enemyCollider.d ?? max(enemyCollider.w ?? 0, enemyCollider.h ?? 0);
 
       this.typesConsumed.push(enemyType);
@@ -158,7 +164,7 @@ class Player {
     for (const [type, count] of Object.entries(counts)) {
       if (type === "tank") bonuses.health += count;
       if (type === "range" || type === "ranged") bonuses.rangeShots += count;
-      if (type === "berserker") bonuses.speed += count;
+      if (type === "berserker" || type === "berzerker") bonuses.speed += count;
     }
 
     this.maxHealth += bonuses.health;

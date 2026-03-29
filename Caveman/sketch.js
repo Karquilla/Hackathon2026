@@ -2,18 +2,25 @@ let player;
 let enemiesGroup;
 let enemies = []; // Array to store Enemy instances for updating
 let enemyImage;
+let uiHudSheet = null;
 let timer;
 let stageEnded = false;
 let stageResultText = "";
+let stageNumber = 1;
+let startStage2Button;
 
 const BASE_WIDTH = 720;
 const BASE_HEIGHT = 480;
 const CANVAS_PADDING = 16;
 const ENEMY_COUNT = 10;
+const STAGE1_ENEMY_TYPE_KEYS = ["cell_green", "cell_blue", "cell_red", "cell_orange", "cell_purple"];
+const STAGE2_ENEMY_TYPE_KEYS = ["org_green", "org_blue", "org_red", "org_orange", "org_purple"];
 
 function preload() {
   // Load the image directly. We'll define the frame size in the Enemy class.
-  enemyImage = loadImage("assets/spriteSheet-export.png");
+  enemyImage = loadImage("assets/spriteSheet.png");
+  // Uncomment when your HUD sheet is ready:
+  // uiHudSheet = loadImage("assets/ui-hud-sheet.png");
 }
 
 function setup() {
@@ -25,22 +32,18 @@ function setup() {
   enemiesGroup = new Group();
 
   player = new Player(120, 260, 36, 48);
+  createStageButtons();
 
-  for (let i = 0; i < ENEMY_COUNT; i++) {
-    let enemyInstance = new Enemy(
-      random(100, BASE_WIDTH - 100), 
-      random(100, BASE_HEIGHT - 100), 
-      16, 16, 
-      { 
-        group: enemiesGroup, 
-        health: 10, 
-        damage: 3, 
-        speed: random(1, 3),
-        spriteSheetImage: enemyImage
-      }
-    );
-    enemies.push(enemyInstance);
-  }
+  // Uncomment and set frame coordinates when your HUD sheet is ready.
+  // setHUDTileSheet(uiHudSheet, {
+  //   tileWidth: 16,
+  //   tileHeight: 16,
+  //   animFps: 8,
+  //   bgFrames: [{ x: 0, y: 0 }, { x: 1, y: 0 }],
+  //   fillFrames: [{ x: 0, y: 1 }, { x: 1, y: 1 }]
+  // });
+
+  spawnEnemies(STAGE1_ENEMY_TYPE_KEYS);
 }
 
 function draw() {
@@ -63,14 +66,17 @@ function draw() {
 
   camera.off();
 
-  drawHUD(timer.getRemainingTime() / 1000);
+  drawHUD(timer.getRemainingTime() / 1000, uiHudSheet);
 
   if (stageEnded) {
     drawStageEndOverlay();
+    drawStageButtons();
+    checkStageButtonPresses();
   }
 
   camera.x = width / 2;
   camera.y = height / 2;
+  //console.log(player.typesConsumedd);
 }
 
 function windowResized() {
@@ -106,7 +112,11 @@ function endStage() {
     .join(" ");
   const bonusSummary = `+${evolutionResult.bonuses.health} HP  +${evolutionResult.bonuses.rangeShots} RangeShots  +${evolutionResult.bonuses.speed} Speed`;
 
-  stageResultText = `Stage Over | ${typeSummary} | ${bonusSummary}`;
+  stageResultText = `Stage ${stageNumber} Over | ${typeSummary} | ${bonusSummary}`;
+
+  if (stageNumber === 1 && startStage2Button) {
+    startStage2Button.visible = true;
+  }
 }
 
 function drawStageEndOverlay() {
@@ -120,4 +130,72 @@ function drawStageEndOverlay() {
   fill(255);
   text(stageResultText, width / 2, height / 2);
   pop();
+}
+
+function spawnEnemies(typeKeys) {
+  clearEnemies();
+
+  for (let i = 0; i < ENEMY_COUNT; i++) {
+    const selectedType = random(typeKeys);
+    const enemyInstance = new Enemy(
+      random(100, BASE_WIDTH - 100),
+      random(100, BASE_HEIGHT - 100),
+      16, 16,
+      {
+        group: enemiesGroup,
+        type: selectedType,
+        spriteSheetImage: enemyImage
+      }
+    );
+    enemies.push(enemyInstance);
+  }
+}
+
+function clearEnemies() {
+  for (const enemy of enemies) {
+    if (enemy?.body && !enemy.body.removed) {
+      enemy.body.remove();
+    }
+  }
+  enemies = [];
+}
+
+function createStageButtons() {
+  startStage2Button = new Sprite(width / 2, height - 42, 220, 40, "static");
+  startStage2Button.color = "#2a9d8f";
+  startStage2Button.stroke = "#d9fff8";
+  startStage2Button.visible = false;
+  startStage2Button.layer = 1000;
+}
+
+function startStage2() {
+  stageNumber = 2;
+  stageEnded = false;
+  stageResultText = "";
+  player.typesConsumed = [];
+  timer.reset(30000);
+  timer.start();
+  spawnEnemies(STAGE2_ENEMY_TYPE_KEYS);
+  if (startStage2Button) startStage2Button.visible = false;
+}
+
+function drawStageButtons() {
+  if (!startStage2Button || !startStage2Button.visible) return;
+
+  push();
+  textAlign(CENTER, CENTER);
+  textSize(18);
+  fill(255);
+  text("Enter Stage 2", startStage2Button.x, startStage2Button.y + 1);
+  pop();
+}
+
+function checkStageButtonPresses() {
+  if (!startStage2Button || !startStage2Button.visible) return;
+  if (stageNumber !== 1) return;
+
+  // p5play input check on sprite button.
+  if (startStage2Button.mouse.pressed("left")) {
+    startStage2();
+  }
 }
