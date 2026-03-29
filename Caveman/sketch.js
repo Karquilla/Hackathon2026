@@ -10,10 +10,15 @@ let stageNumber = 1;
 let startStage2Button;
 let stageAdvanceLabel = "";
 
-const BASE_WIDTH = 720;
-const BASE_HEIGHT = 480;
+const CANVAS_WIDTH = 1280;
+const CANVAS_HEIGHT = 720;
+const WORLD_WIDTH = 2800;
+const WORLD_HEIGHT = 1800;
 const CANVAS_PADDING = 16;
 const ENEMY_COUNT = 10;
+const CAMERA_ZOOM = 1.8;
+const CAMERA_EDGE_BUFFER_X = 170;
+const CAMERA_EDGE_BUFFER_Y = 110;
 const STAGE1_ENEMY_TYPE_KEYS = ["cell_green", "cell_blue", "cell_red", "cell_orange", "cell_purple"];
 const STAGE2_ENEMY_TYPE_KEYS = ["org_green", "org_blue", "org_red", "org_orange", "org_purple"];
 const STAGE3_ENEMY_TYPE_KEYS = ["fsh_green", "fsh_blue", "fsh_red", "fsh_orange", "fsh_purple"];
@@ -26,14 +31,18 @@ function preload() {
 }
 
 function setup() {
-  new Canvas(BASE_WIDTH, BASE_HEIGHT);
+  new Canvas(CANVAS_WIDTH, CANVAS_HEIGHT);
   fitCanvasDisplayToWindow();
   timer = new CountdownTimer(10000); // 10 seconds in milliseconds
   timer.start();
 
   enemiesGroup = new Group();
 
-  player = new Player(120, 260, 36, 48);
+  player = new Player(120, 260, 16, 24);
+  player.configureForStage(stageNumber);
+  camera.zoom = CAMERA_ZOOM;
+  camera.x = player.body.x;
+  camera.y = player.body.y;
   createStageButtons();
 
   // Uncomment and set frame coordinates when your HUD sheet is ready.
@@ -59,14 +68,18 @@ function draw() {
 
   camera.on();
 
+  drawWorldBounds();
+
   if (!stageEnded) {
-    player.update(enemiesGroup);
+    player.update(enemiesGroup, { minX: 0, minY: 0, maxX: WORLD_WIDTH, maxY: WORLD_HEIGHT });
 
     // Update each enemy instance
     for (let enemy of enemies) {
-      enemy.update();
+      enemy.update({ minX: 0, minY: 0, maxX: WORLD_WIDTH, maxY: WORLD_HEIGHT });
     }
   }
+
+  updateCameraBounds();
 
   camera.off();
 
@@ -78,9 +91,6 @@ function draw() {
     checkStageButtonPresses();
   }
 
-  camera.x = width / 2;
-  camera.y = height / 2;
-  //console.log(player.typesConsumedd);
 }
 
 function windowResized() {
@@ -90,9 +100,9 @@ function windowResized() {
 function fitCanvasDisplayToWindow() {
   const availableWidth = max(320, windowWidth - CANVAS_PADDING * 2);
   const availableHeight = max(180, windowHeight - CANVAS_PADDING * 2);
-  const scale = min(availableWidth / BASE_WIDTH, availableHeight / BASE_HEIGHT);
-  const displayWidth = floor(BASE_WIDTH * scale);
-  const displayHeight = floor(BASE_HEIGHT * scale);
+  const scale = min(availableWidth / width, availableHeight / height);
+  const displayWidth = floor(width * scale);
+  const displayHeight = floor(height * scale);
   const canvasEl = document.querySelector("canvas");
   if (!canvasEl) return;
 
@@ -107,21 +117,20 @@ function endStage() {
 
   const evolutionResult = player.evolveFromConsumedTypes();
   if (!evolutionResult.evolved) {
-    stageResultText = "Stage Over: no evolution (nothing consumed)";
-    return;
+    stageResultText = `Stage ${stageNumber} Over |\n no evolution (nothing consumed)`;
+  } else {
+    const typeSummary = Object.entries(evolutionResult.counts)
+      .map(([type, count]) => `${type}:${count}`)
+      .join(" ");
+    const bonusSummary = formatEvolutionBonuses(evolutionResult.bonuses);
+
+    stageResultText = `Stage ${stageNumber} Over |\n ${typeSummary} |\n ${bonusSummary}`;
   }
-
-  const typeSummary = Object.entries(evolutionResult.counts)
-    .map(([type, count]) => `${type}:${count}`)
-    .join(" ");
-  const bonusSummary = `+${evolutionResult.bonuses.health} HP  +${evolutionResult.bonuses.rangeShots} RangeShots  +${evolutionResult.bonuses.speed} Speed`;
-
-  stageResultText = `Stage ${stageNumber} Over |\n ${typeSummary} |\n ${bonusSummary}`;
 
   if ((stageNumber === 1 || stageNumber === 2) && startStage2Button) {
     stageAdvanceLabel = stageNumber === 1 ? "Enter Stage 2" : "Enter Stage 3";
     startStage2Button.visible = true;
-    startStage2Button.collider = "static";
+    startStage2Button.label = stageAdvanceLabel;
   }
 }
 
@@ -144,8 +153,8 @@ function spawnEnemies(typeKeys) {
   for (let i = 0; i < ENEMY_COUNT; i++) {
     const selectedType = random(typeKeys);
     const enemyInstance = new Enemy(
-      random(100, BASE_WIDTH - 100),
-      random(100, BASE_HEIGHT - 100),
+      random(100, WORLD_WIDTH - 100),
+      random(100, WORLD_HEIGHT - 100),
       16, 16,
       {
         group: enemiesGroup,
@@ -167,27 +176,29 @@ function clearEnemies() {
 }
 
 function createStageButtons() {
-  startStage2Button = new Sprite(width / 2, height - 42, 220, 40, "static");
-  startStage2Button.color = "#2a9d8f";
-  startStage2Button.stroke = "#d9fff8";
-  startStage2Button.visible = false;
-  startStage2Button.collider = "none";
-  startStage2Button.layer = 1000;
-  startStage2Button.text = "Enter Stage 2";
-
+  startStage2Button = {
+    x: width / 2,
+    y: height - 42,
+    w: 220,
+    h: 40,
+    visible: false,
+    label: "Enter Stage 2",
+    fill: "#2a9d8f",
+    stroke: "#d9fff8"
+  };
 }
 
 function startStage2() {
   stageNumber = 2;
   stageEnded = false;
   stageResultText = "";
+  player.configureForStage(stageNumber);
   player.typesConsumed = [];
   timer.reset(30000);
   timer.start();
   spawnEnemies(STAGE2_ENEMY_TYPE_KEYS);
   if (startStage2Button) {
     startStage2Button.visible = false;
-    startStage2Button.collider = "none";
   }
 }
 
@@ -195,13 +206,13 @@ function startStage3() {
   stageNumber = 3;
   stageEnded = false;
   stageResultText = "";
+  player.configureForStage(stageNumber);
   player.typesConsumed = [];
   timer.reset(30000);
   timer.start();
   spawnEnemies(STAGE3_ENEMY_TYPE_KEYS);
   if (startStage2Button) {
     startStage2Button.visible = false;
-    startStage2Button.collider = "none";
   }
 }
 
@@ -209,10 +220,20 @@ function drawStageButtons() {
   if (!startStage2Button || !startStage2Button.visible) return;
 
   push();
+  startStage2Button.x = width / 2;
+  startStage2Button.y = height - 42;
+
+  rectMode(CENTER);
+  stroke(startStage2Button.stroke);
+  strokeWeight(2);
+  fill(isStageButtonHovered() ? "#33b8a7" : startStage2Button.fill);
+  rect(startStage2Button.x, startStage2Button.y, startStage2Button.w, startStage2Button.h, 10);
+
+  noStroke();
   textAlign(CENTER, CENTER);
   textSize(18);
   fill(255);
-  text(stageAdvanceLabel || "Enter Stage", startStage2Button.x, startStage2Button.y + 1);
+  text(startStage2Button.label || stageAdvanceLabel || "Enter Stage", startStage2Button.x, startStage2Button.y + 1);
   pop();
 }
 
@@ -220,9 +241,78 @@ function checkStageButtonPresses() {
   if (!startStage2Button || !startStage2Button.visible) return;
   if (stageNumber !== 1 && stageNumber !== 2) return;
 
-  // p5play input check on sprite button.
-  if (startStage2Button.mouse.pressed("left")) {
+  if (mouse.presses() && isStageButtonHovered()) {
     if (stageNumber === 1) startStage2();
     else if (stageNumber === 2) startStage3();
   }
+}
+
+function isStageButtonHovered() {
+  if (!startStage2Button?.visible) return false;
+
+  const halfW = startStage2Button.w / 2;
+  const halfH = startStage2Button.h / 2;
+  return (
+    mouseX >= startStage2Button.x - halfW &&
+    mouseX <= startStage2Button.x + halfW &&
+    mouseY >= startStage2Button.y - halfH &&
+    mouseY <= startStage2Button.y + halfH
+  );
+}
+
+function updateCameraBounds() {
+  if (!player?.body) return;
+
+  const halfViewWidth = width / (2 * camera.zoom);
+  const halfViewHeight = height / (2 * camera.zoom);
+  const minCameraX = halfViewWidth;
+  const maxCameraX = max(halfViewWidth, WORLD_WIDTH - halfViewWidth);
+  const minCameraY = halfViewHeight;
+  const maxCameraY = max(halfViewHeight, WORLD_HEIGHT - halfViewHeight);
+  const edgeBufferX = min(CAMERA_EDGE_BUFFER_X, halfViewWidth - 16);
+  const edgeBufferY = min(CAMERA_EDGE_BUFFER_Y, halfViewHeight - 16);
+
+  let nextCameraX = camera.x;
+  let nextCameraY = camera.y;
+  const playerX = player.body.x;
+  const playerY = player.body.y;
+
+  const leftEdge = camera.x - halfViewWidth + edgeBufferX;
+  const rightEdge = camera.x + halfViewWidth - edgeBufferX;
+  const topEdge = camera.y - halfViewHeight + edgeBufferY;
+  const bottomEdge = camera.y + halfViewHeight - edgeBufferY;
+
+  if (playerX < leftEdge) nextCameraX -= leftEdge - playerX;
+  if (playerX > rightEdge) nextCameraX += playerX - rightEdge;
+  if (playerY < topEdge) nextCameraY -= topEdge - playerY;
+  if (playerY > bottomEdge) nextCameraY += playerY - bottomEdge;
+
+  camera.x = constrain(nextCameraX, minCameraX, maxCameraX);
+  camera.y = constrain(nextCameraY, minCameraY, maxCameraY);
+}
+
+function drawWorldBounds() {
+  push();
+  rectMode(CORNER);
+  noFill();
+  stroke("#2a2016");
+  strokeWeight(8);
+  rect(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
+  pop();
+}
+
+function formatEvolutionBonuses(bonuses) {
+  const summary = [];
+
+  if (bonuses.health) summary.push(`+${formatBonusValue(bonuses.health)} HP`);
+  if (bonuses.rangeShots) summary.push(`+${formatBonusValue(bonuses.rangeShots)} RangeShots`);
+  if (bonuses.speed) summary.push(`+${formatBonusValue(bonuses.speed)} Speed`);
+  if (bonuses.grapplePull) summary.push(`+${formatBonusValue(bonuses.grapplePull)} GrapplePull`);
+  if (bonuses.cooldownReductionMs) summary.push(`-${formatBonusValue(bonuses.cooldownReductionMs)}ms Cooldown`);
+
+  return summary.length ? summary.join("  ") : "No bonuses gained";
+}
+
+function formatBonusValue(value) {
+  return Number.isInteger(value) ? value : value.toFixed(2);
 }
