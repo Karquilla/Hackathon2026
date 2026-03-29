@@ -9,12 +9,12 @@ let hudBorderSheet = null;
 let hudBorderConfig = {
   tileWidth: 16,
   tileHeight: 16,
-  coordMode: "tile",
+  coordMode: "pixel",
   scale: 1.35,
   midRepeats: 6,
-  left: { x: 5, y: 13 },
-  mid: { x: 6, y: 13 },
-  right: { x: 7, y: 13 }
+  left: { x: 160, y: 304 },
+  mid: { x: 176, y: 304 },
+  right: { x: 190, y: 304 }
 };
 
 function setHUDTileSheet(sheet, options = {}) {

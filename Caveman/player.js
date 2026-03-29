@@ -5,7 +5,7 @@ class Player {
     this.body.rotationLock = true;
     this.speed = 5;
     this.movementMode = "topdown";
-    this.jumpStrength = 12;
+    this.jumpStrength = 14;
     this.gravity = 0.7;
     this.maxFallSpeed = 14;
     this.isGrounded = false;

@@ -20,14 +20,15 @@ const ENEMY_COUNT = 40;
 const CAMERA_ZOOM = 1.8;
 const CAMERA_EDGE_BUFFER_X = 170;
 const CAMERA_EDGE_BUFFER_Y = 110;
-const DEBUG_START_STAGE = 4; // Set to 1, 2, 3, or 4 to jump directly into that stage.
+const DEBUG_START_STAGE = 2; // Set to 1, 2, 3, or 4 to jump directly into that stage.
 const STAGE1_ENEMY_TYPE_KEYS = ["cell_green", "cell_blue", "cell_red", "cell_orange", "cell_purple"];
 const STAGE2_ENEMY_TYPE_KEYS = ["org_green", "org_blue", "org_red", "org_orange", "org_purple"];
 const STAGE3_ENEMY_TYPE_KEYS = ["fsh_green", "fsh_blue", "fsh_red", "fsh_orange", "fsh_purple"];
+const STAGE4_ENEMY_TYPE_KEYS = ["rat", "rabbit", "fox", "panda", "bear"];
 
 function preload() {
   // Load the image directly. We'll define the frame size in the Enemy class.
-  enemyImage = loadImage("assets/spriteSheet.png");
+  enemyImage = loadImage("assets/primalAscentAnimations.png");
   // Uncomment when your HUD sheet is ready:
   // uiHudSheet = loadImage("assets/ui-hud-sheet.png");
 }
@@ -75,14 +76,14 @@ function draw() {
   drawWorldBounds();
 
   if (!stageEnded) {
-    const activeEnemies = stageNumber >= 4 ? null : enemiesGroup;
+    const activeEnemies = enemiesGroup;
     const activeFloors = stageNumber >= 4 ? floorManager?.group : null;
 
     player.update(activeEnemies, { minX: 0, minY: 0, maxX: WORLD_WIDTH, maxY: WORLD_HEIGHT }, activeFloors);
 
     // Update each enemy instance
     for (let enemy of enemies) {
-      enemy.update({ minX: 0, minY: 0, maxX: WORLD_WIDTH, maxY: WORLD_HEIGHT });
+      enemy.update({ minX: 0, minY: 0, maxX: WORLD_WIDTH, maxY: WORLD_HEIGHT }, activeFloors);
     }
   }
 
@@ -161,16 +162,34 @@ function drawStageEndOverlay() {
 function spawnEnemies(typeKeys) {
   clearEnemies();
 
+  const isStage4 = (stageNumber === 4);
+
   for (let i = 0; i < ENEMY_COUNT; i++) {
     const selectedType = random(typeKeys);
+    
+    let x, y;
+    if (isStage4) {
+      // Spawn near the floor/platforms in Stage 4 (bottom 600px)
+      x = random(100, WORLD_WIDTH - 100);
+      y = random(WORLD_HEIGHT - 600, WORLD_HEIGHT - 100);
+    } else {
+      x = random(100, WORLD_WIDTH - 100);
+      y = random(100, WORLD_HEIGHT - 100);
+    }
+
+    // Mammals are 32x16, others are usually 16x16 or 20x20
+    const isMammal = STAGE4_ENEMY_TYPE_KEYS.includes(selectedType);
+    const ew = isMammal ? 32 : 16;
+    const eh = 16;
+
     const enemyInstance = new Enemy(
-      random(100, WORLD_WIDTH - 100),
-      random(100, WORLD_HEIGHT - 100),
-      16, 16,
+      x, y,
+      ew, eh,
       {
         group: enemiesGroup,
         type: selectedType,
-        spriteSheetImage: enemyImage
+        spriteSheetImage: enemyImage,
+        movementMode: isStage4 ? "platformer" : "topdown"
       }
     );
     enemies.push(enemyInstance);
@@ -246,6 +265,7 @@ function startStage4() {
   camera.y = player.body.y;
   timer.reset(45000);
   timer.start();
+  spawnEnemies(STAGE4_ENEMY_TYPE_KEYS);
   if (startStage2Button) {
     startStage2Button.visible = false;
   }
