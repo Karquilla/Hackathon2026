@@ -159,7 +159,7 @@ class Enemy {
             this.body = new Sprite(x, y, w, h);
         }
 
-        const typeData = ENEMY_CELL[options.type] || ENEMY_ORGANISM[options.type] || ENEMY_FISH[options.type] || {};
+        const typeData = ENEMY_CELL[options.type] || ENEMY_ORGANISM[options.type] || ENEMY_FISH[options.type] || MAMMALS[options.type] || {};
         this.body.enemyType = typeData.type || options.type || 'basic'; // explicitly set for player.js
         this.body.type = options.type || 'basic';
         this.body.enemyData = typeData; // Attach the full data object to the sprite

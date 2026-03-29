@@ -24,6 +24,7 @@ const DEBUG_START_STAGE = 4; // Set to 1, 2, 3, or 4 to jump directly into that 
 const STAGE1_ENEMY_TYPE_KEYS = ["cell_green", "cell_blue", "cell_red", "cell_orange", "cell_purple"];
 const STAGE2_ENEMY_TYPE_KEYS = ["org_green", "org_blue", "org_red", "org_orange", "org_purple"];
 const STAGE3_ENEMY_TYPE_KEYS = ["fsh_green", "fsh_blue", "fsh_red", "fsh_orange", "fsh_purple"];
+const STAGE4_ENEMY_TYPE_KEYS = ["mouse", "rabbit", "fox", "panda", "bear"];
 
 function preload() {
   // Load the image directly. We'll define the frame size in the Enemy class.
@@ -75,7 +76,7 @@ function draw() {
   drawWorldBounds();
 
   if (!stageEnded) {
-    const activeEnemies = stageNumber >= 4 ? null : enemiesGroup;
+    const activeEnemies = enemiesGroup;
     const activeFloors = stageNumber >= 4 ? floorManager?.group : null;
 
     player.update(activeEnemies, { minX: 0, minY: 0, maxX: WORLD_WIDTH, maxY: WORLD_HEIGHT }, activeFloors);
@@ -233,7 +234,6 @@ function startStage4() {
   stageNumber = 4;
   stageEnded = false;
   stageResultText = "";
-  clearEnemies();
   clearStageFloors();
   buildStage4Platforms();
   player.configureForStage(stageNumber);
@@ -244,6 +244,7 @@ function startStage4() {
   player.body.vel.y = 0;
   camera.x = player.body.x;
   camera.y = player.body.y;
+  spawnEnemies(STAGE4_ENEMY_TYPE_KEYS);
   timer.reset(45000);
   timer.start();
   if (startStage2Button) {
