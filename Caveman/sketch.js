@@ -41,6 +41,7 @@ function setup() {
 
   for (let i = 0; i < ENEMY_COUNT; i++) {
     const selectedType = random(ENEMY_TYPE_KEYS);
+
     let enemyInstance = new Enemy(
       random(100, BASE_WIDTH - 100), 
       random(100, BASE_HEIGHT - 100), 
@@ -51,6 +52,7 @@ function setup() {
         spriteSheetImage: enemyImage
       }
     );
+
     enemies.push(enemyInstance);
   }
 }
