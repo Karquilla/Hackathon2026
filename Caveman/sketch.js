@@ -20,7 +20,7 @@ const ENEMY_COUNT = 40;
 const CAMERA_ZOOM = 1.8;
 const CAMERA_EDGE_BUFFER_X = 170;
 const CAMERA_EDGE_BUFFER_Y = 110;
-const DEBUG_START_STAGE = 2; // Set to 1, 2, 3, or 4 to jump directly into that stage.
+const DEBUG_START_STAGE = 4; // Set to 1, 2, 3, or 4 to jump directly into that stage.
 const STAGE1_ENEMY_TYPE_KEYS = ["cell_green", "cell_blue", "cell_red", "cell_orange", "cell_purple"];
 const STAGE2_ENEMY_TYPE_KEYS = ["org_green", "org_blue", "org_red", "org_orange", "org_purple"];
 const STAGE3_ENEMY_TYPE_KEYS = ["fsh_green", "fsh_blue", "fsh_red", "fsh_orange", "fsh_purple"];
@@ -40,7 +40,7 @@ function setup() {
   timer.start();
 
   enemiesGroup = new Group();
-  floorManager = new Floor();
+  floorManager = new Floor({ spriteSheetImage: enemyImage });
 
   player = new Player(120, 260, 16, 24);
   player.configureForStage(stageNumber);
@@ -83,7 +83,10 @@ function draw() {
 
     // Update each enemy instance
     for (let enemy of enemies) {
-      enemy.update({ minX: 0, minY: 0, maxX: WORLD_WIDTH, maxY: WORLD_HEIGHT }, activeFloors);
+      enemy.update(
+        { minX: 0, minY: 0, maxX: WORLD_WIDTH, maxY: WORLD_HEIGHT },
+        activeFloors
+      );
     }
   }
 
@@ -166,32 +169,46 @@ function spawnEnemies(typeKeys) {
 
   for (let i = 0; i < ENEMY_COUNT; i++) {
     const selectedType = random(typeKeys);
-    
-    let x, y;
+
+    let ew = 16;
+    let eh = 16;
+
     if (isStage4) {
-      // Spawn near the floor/platforms in Stage 4 (bottom 600px)
-      x = random(100, WORLD_WIDTH - 100);
-      y = random(WORLD_HEIGHT - 600, WORLD_HEIGHT - 100);
+      ew = 32;
+    }
+
+    let x, y;
+
+    if (isStage4) {
+      const spawnPlatforms = [
+        floorManager.group[0],
+        floorManager.group[1],
+        floorManager.group[2],
+        floorManager.group[3],
+        floorManager.group[4],
+      ].filter(Boolean);
+
+      const platform = random(spawnPlatforms);
+      const margin = 24;
+
+      x = random(
+        platform.x - platform.w / 2 + margin,
+        platform.x + platform.w / 2 - margin
+      );
+
+      y = platform.y - platform.h / 2 - eh / 2;
     } else {
       x = random(100, WORLD_WIDTH - 100);
       y = random(100, WORLD_HEIGHT - 100);
     }
 
-    // Mammals are 32x16, others are usually 16x16 or 20x20
-    const isMammal = STAGE4_ENEMY_TYPE_KEYS.includes(selectedType);
-    const ew = isMammal ? 32 : 16;
-    const eh = 16;
+    const enemyInstance = new Enemy(x, y, ew, eh, {
+      group: enemiesGroup,
+      type: selectedType,
+      spriteSheetImage: enemyImage,
+      movementMode: isStage4 ? "platformer" : "topdown"
+    });
 
-    const enemyInstance = new Enemy(
-      x, y,
-      ew, eh,
-      {
-        group: enemiesGroup,
-        type: selectedType,
-        spriteSheetImage: enemyImage,
-        movementMode: isStage4 ? "platformer" : "topdown"
-      }
-    );
     enemies.push(enemyInstance);
   }
 }
