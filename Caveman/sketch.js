@@ -42,6 +42,8 @@ function setup() {
   //   bgFrames: [{ x: 0, y: 0 }, { x: 1, y: 0 }],
   //   fillFrames: [{ x: 0, y: 1 }, { x: 1, y: 1 }]
   // });
+  // Use border tile coordinates configured in UI.js.
+  setHUDBorderTiles(enemyImage);
 
   spawnEnemies(STAGE1_ENEMY_TYPE_KEYS);
 }
@@ -66,7 +68,7 @@ function draw() {
 
   camera.off();
 
-  drawHUD(timer.getRemainingTime() / 1000, uiHudSheet);
+  drawHUD(timer.getRemainingTime() / 1000, timer.duration / 1000, uiHudSheet, enemyImage);
 
   if (stageEnded) {
     drawStageEndOverlay();
