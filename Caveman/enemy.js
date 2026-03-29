@@ -112,6 +112,43 @@ const ENEMY_FISH = {
         frame: 7,
     }
 }
+const MAMMALS = {
+    mouse: {
+        health: 7,
+        damage: 9,
+        type: 'tank',
+        speed: 4,
+        frame: 9,
+    },
+    rabbit: {
+        health: 7,
+        damage: 11,
+        type: 'trickster',
+        speed: 6,
+        frame: 11,
+    },
+    fox: {
+        health: 6,
+        damage: 12,
+        type: 'berzerker',
+        speed: 7,
+        frame: 10,
+    },
+    panda: {
+        health: 9,
+        damage: 7,
+        type: 'range',
+        speed: 5,
+        frame: 12,
+    },
+    bear: {
+        health: 9,
+        damage: 9,
+        type: 'base',
+        speed: 5,
+        frame: 7,
+    }
+}
 
 class Enemy {
     constructor(x, y, w = 20, h = 20, options = {}) {
@@ -155,6 +192,13 @@ class Enemy {
                 fsh_orange:  { x: 0, y: 96, frames: 1, w: 32, h: 16 },
                 fsh_blue:    { x: 32,   y: 96,   frames: 1, w: 32, h: 16 },
                 fsh_red:     { x: 0,    y: 112,    frames: 1, w: 32, h: 16 },
+
+                // Mammals
+                mouse:       { x: 0, y: 144, frames: 1, w: 32, h: 16 },
+                rabbit:      { x: 0, y: 144, frames: 1, w: 32, h: 16 },
+                fox:         { x: 0, y: 144, frames: 1, w: 32, h: 16 },
+                panda:       { x: 0, y: 144, frames: 1, w: 32, h: 16 },
+                bear:        { x: 0, y: 144, frames: 1, w: 32, h: 16 },
             });
             
             this.body.ani = options.type || 'cell_green';
