@@ -1,16 +1,18 @@
 let player;
 let enemiesGroup;
-let enemies = []; // Array to store Enemy instances for updating
+let enemies = [];
 let enemyImage;
 let uiHudSheet = null;
 let backgroundImages = {};
 let currentStageBackgroundLayers = [];
 let timer;
 let floorManager;
+let titleScreenActive = true;
 let stageEnded = false;
 let gameOver = false;
 let stageResultText = "";
 let stageNumber = 1;
+let startGameButton;
 let startStage2Button;
 let restartButton;
 let stageAdvanceLabel = "";
@@ -24,7 +26,7 @@ const ENEMY_COUNT = 40;
 const CAMERA_ZOOM = 1.8;
 const CAMERA_EDGE_BUFFER_X = 170;
 const CAMERA_EDGE_BUFFER_Y = 110;
-const DEBUG_START_STAGE = null; // Set to 1, 2, 3, 4, or 5 to jump directly into that stage.
+const DEBUG_START_STAGE = null;
 const STAGE1_ENEMY_TYPE_KEYS = ["cell_green", "cell_blue", "cell_red", "cell_orange", "cell_purple"];
 const STAGE2_ENEMY_TYPE_KEYS = ["org_green", "org_blue", "org_red", "org_orange", "org_purple"];
 const STAGE3_ENEMY_TYPE_KEYS = ["fsh_green", "fsh_blue", "fsh_red", "fsh_orange", "fsh_purple"];
@@ -50,15 +52,14 @@ const STAGE5_PLATFORM_TILES = {
 };
 const PLAYER_STAGE_SIZE_RETAIN = 0.8;
 const ENEMY_SIZE_VARIANCE = {
-  1: { min: 0.95, max: 1.9 },
-  2: { min: 1.0, max: 1.85 },
-  3: { min: 0.85, max: 2.0 },
-  4: { min: 0.8, max: 2.1 },
-  5: { min: 0.8, max: 2.15 }
+  1: { min: 0.6, max: 1.7 },
+  2: { min: 0.65, max: 1.75 },
+  3: { min: 0.55, max: 1.9 },
+  4: { min: 0.5, max: 2.0 },
+  5: { min: 0.5, max: 2.05 }
 };
 
 function preload() {
-  // Load the image directly. We'll define the frame size in the Enemy class.
   enemyImage = loadImage("assets/primalAscentAnimations.png");
   backgroundImages = {
     3: [
@@ -74,15 +75,12 @@ function preload() {
       loadImage("assets/backLevelTwoP2.png")
     ]
   };
-  // Uncomment when your HUD sheet is ready:
-  // uiHudSheet = loadImage("assets/ui-hud-sheet.png");
 }
 
 function setup() {
   new Canvas(CANVAS_WIDTH, CANVAS_HEIGHT);
   fitCanvasDisplayToWindow();
-  timer = new CountdownTimer(10000); // 10 seconds in milliseconds
-  timer.start();
+  timer = new CountdownTimer(10000);
 
   enemiesGroup = new Group();
   floorManager = new Floor({ spriteSheetImage: enemyImage, platformTiles: STAGE4_PLATFORM_TILES });
@@ -92,17 +90,22 @@ function setup() {
   camera.zoom = CAMERA_ZOOM;
   camera.x = player.body.x;
   camera.y = player.body.y;
+  createStartGameButton();
   createStageButtons();
   createRestartButton();
 
   setHUDBorderTiles(enemyImage);
-
-  spawnEnemies(STAGE1_ENEMY_TYPE_KEYS);
-  applyDebugStartStage();
 }
 
 function draw() {
   drawStageBackground();
+
+  if (titleScreenActive) {
+    drawTitleScreen();
+    drawStartGameButton();
+    checkStartGameButtonPresses();
+    return;
+  }
 
   if (!stageEnded && !gameOver && timer.isFinished()) {
     endStage();
@@ -119,7 +122,6 @@ function draw() {
     player.update(activeEnemies, { minX: 0, minY: 0, maxX: WORLD_WIDTH, maxY: WORLD_HEIGHT }, activeFloors);
     checkGameOver();
 
-    // Update each enemy instance
     if (!gameOver) {
       for (let enemy of enemies) {
         enemy.update(
@@ -161,7 +163,6 @@ function fitCanvasDisplayToWindow() {
   const canvasEl = document.querySelector("canvas");
   if (!canvasEl) return;
 
-  // Keep gameplay/world units fixed and only scale visual size.
   canvasEl.style.width = `${displayWidth}px`;
   canvasEl.style.height = `${displayHeight}px`;
 }
@@ -216,8 +217,7 @@ function spawnEnemies(typeKeys) {
 
   for (let i = 0; i < ENEMY_COUNT; i++) {
     const selectedType = random(typeKeys);
-    const sizeVariance = getEnemySizeVariance(stageNumber);
-    const sizeMultiplier = random(sizeVariance.min, sizeVariance.max);
+    const sizeMultiplier = rollEnemySizeMultiplier(stageNumber);
 
     let ew = 16;
     let eh = 16;
@@ -302,6 +302,19 @@ function createStageButtons() {
   };
 }
 
+function createStartGameButton() {
+  startGameButton = {
+    x: width / 2,
+    y: height / 2 + 86,
+    w: 240,
+    h: 48,
+    visible: true,
+    label: "Start Game",
+    fill: "#2a9d8f",
+    stroke: "#d9fff8"
+  };
+}
+
 function createRestartButton() {
   restartButton = {
     x: width / 2,
@@ -313,6 +326,43 @@ function createRestartButton() {
     fill: "#bf4343",
     stroke: "#ffe0e0"
   };
+}
+
+function drawTitleScreen() {
+  push();
+  noStroke();
+  fill(0, 0, 0, 120);
+  rect(0, 0, width, height);
+
+  textAlign(CENTER, CENTER);
+  fill(255);
+  textSize(54);
+  text("Primal Ascent", width / 2, height / 2 - 56);
+
+  textSize(22);
+  text("Consume smaller enemies. Evolve. Survive each stage.", width / 2, height / 2);
+  pop();
+}
+
+function drawStartGameButton() {
+  if (!startGameButton?.visible) return;
+
+  push();
+  startGameButton.x = width / 2;
+  startGameButton.y = height / 2 + 86;
+
+  rectMode(CENTER);
+  stroke(startGameButton.stroke);
+  strokeWeight(2);
+  fill(isStartGameButtonHovered() ? "#33b8a7" : startGameButton.fill);
+  rect(startGameButton.x, startGameButton.y, startGameButton.w, startGameButton.h, 12);
+
+  noStroke();
+  textAlign(CENTER, CENTER);
+  textSize(22);
+  fill(255);
+  text(startGameButton.label, startGameButton.x, startGameButton.y + 1);
+  pop();
 }
 
 function startStage2() {
@@ -482,6 +532,14 @@ function checkStageButtonPresses() {
   }
 }
 
+function checkStartGameButtonPresses() {
+  if (!startGameButton?.visible) return;
+
+  if (mouse.presses() && isStartGameButtonHovered()) {
+    beginGameFromTitle();
+  }
+}
+
 function checkRestartButtonPresses() {
   if (!restartButton || !restartButton.visible) return;
 
@@ -500,6 +558,19 @@ function isStageButtonHovered() {
     mouseX <= startStage2Button.x + halfW &&
     mouseY >= startStage2Button.y - halfH &&
     mouseY <= startStage2Button.y + halfH
+  );
+}
+
+function isStartGameButtonHovered() {
+  if (!startGameButton?.visible) return false;
+
+  const halfW = startGameButton.w / 2;
+  const halfH = startGameButton.h / 2;
+  return (
+    mouseX >= startGameButton.x - halfW &&
+    mouseX <= startGameButton.x + halfW &&
+    mouseY >= startGameButton.y - halfH &&
+    mouseY <= startGameButton.y + halfH
   );
 }
 
@@ -639,6 +710,21 @@ function getEnemySizeVariance(stage) {
   return ENEMY_SIZE_VARIANCE[stage] ?? { min: 0.9, max: 1.1 };
 }
 
+function rollEnemySizeMultiplier(stage) {
+  const variance = getEnemySizeVariance(stage);
+  const roll = random();
+
+  if (roll < 0.55) {
+    return random(variance.min, min(1, variance.max));
+  }
+
+  if (roll < 0.85) {
+    return random(max(variance.min, 0.95), min(1.25, variance.max));
+  }
+
+  return random(max(variance.min, 1.15), variance.max);
+}
+
 function createPlayerForStage(stage) {
   const nextPlayer = new Player(120, 260, 16, 24, {
     spriteSheetImage: enemyImage,
@@ -646,6 +732,16 @@ function createPlayerForStage(stage) {
   });
   nextPlayer.configureForStage(stage);
   return nextPlayer;
+}
+
+function beginGameFromTitle() {
+  titleScreenActive = false;
+  if (startGameButton) {
+    startGameButton.visible = false;
+  }
+
+  startFreshRun();
+  applyDebugStartStage();
 }
 
 function checkGameOver() {
@@ -686,6 +782,14 @@ function drawGameOverOverlay() {
 }
 
 function restartGame() {
+  startFreshRun();
+
+  if (restartButton) {
+    restartButton.visible = false;
+  }
+}
+
+function startFreshRun() {
   gameOver = false;
   stageEnded = false;
   stageResultText = "";
@@ -708,9 +812,5 @@ function restartGame() {
   if (startStage2Button) {
     startStage2Button.visible = false;
     startStage2Button.label = "Enter Stage 2";
-  }
-
-  if (restartButton) {
-    restartButton.visible = false;
   }
 }

@@ -27,6 +27,7 @@ class Player {
     this.minGrappleCooldownMs = 90;
     this.lastDamageAt = -99999;
     this.contactDamageCooldownMs = 500;
+    this.enemyDamageTakenMultiplier = 0.5;
     this.evolutionType = "base";
     this.typesConsumed = [];
     this.foodConsumed = 0;
@@ -391,7 +392,8 @@ class Player {
     if (millis() - this.lastDamageAt < this.contactDamageCooldownMs) return;
 
     this.lastDamageAt = millis();
-    this.health = max(0, this.health - amount);
+    const scaledDamage = max(1, round(amount * this.enemyDamageTakenMultiplier));
+    this.health = max(0, this.health - scaledDamage);
   }
 
   evolveFromConsumedTypes() {
