@@ -71,9 +71,47 @@ const ENEMY_ORGANISM = {
         type: 'base',
         speed: 3,
         frame: 5, // Row 3, Pos 7
-
     }
 
+}
+
+const ENEMY_FISH = {
+    fsh_green: {
+        health: 7,
+        damage: 9,
+        type: 'tank',
+        speed: 4,
+        frame: 9, // Row 1, Pos 9
+    },
+    fsh_purple: {
+        health: 7,
+        damage: 11,
+        type: 'trickster',
+        speed: 6,
+        frame: 11, // Row 1, Pos 11
+    },
+    fsh_orange: {
+        health: 6,
+        damage: 12,
+        type: 'berzerker',
+        speed: 7,
+        frame: 10, // Row 2, Pos 9
+    },
+    fsh_blue: {
+        health: 9,
+        damage: 7,
+        type: 'range',
+        speed: 5,
+        frame: 12, // Row 2, Pos 11
+        
+    },
+    fsh_red: {
+        health: 9,
+        damage: 9,
+        type: 'base',
+        speed: 5,
+        frame: 7, // Row 3, Pos 9
+    }
 }
 
 class Enemy {
@@ -85,7 +123,7 @@ class Enemy {
             this.body = new Sprite(x, y, w, h);
         }
 
-        const typeData = ENEMY_CELL[options.type] || ENEMY_ORGANISM[options.type] || {};
+        const typeData = ENEMY_CELL[options.type] || ENEMY_ORGANISM[options.type] || ENEMY_FISH[options.type] || {};
         this.body.enemyType = typeData.type || options.type || 'basic'; // explicitly set for player.js
         this.body.type = options.type || 'basic';
         this.body.enemyData = typeData; // Attach the full data object to the sprite
@@ -98,17 +136,26 @@ class Enemy {
         if (options.spriteSheetImage) {
             this.body.spriteSheet = options.spriteSheetImage;
             this.body.addAnis({
-                cell_green:  { row: 1, col: 0, frames: 1, w: 16, h: 16 },
-                cell_blue:   { row: 1, col: 1, frames: 1, w: 16, h: 16 },
-                cell_red:    { row: 2, col: 0, frames: 1, w: 16, h: 16 },
-                cell_orange: { row: 2, col: 1, frames: 1, w: 16, h: 16 },
-                cell_purple: { row: 3, col: 0, frames: 1, w: 16, h: 16 },
+                // Cells
+                cell_green:  { x: 0,   y: 16, frames: 1, w: 16, h: 16 },
+                cell_blue:   { x: 16,  y: 16, frames: 1, w: 16, h: 16 },
+                cell_red:    { x: 0,   y: 32, frames: 1, w: 16, h: 16 },
+                cell_orange: { x: 16,  y: 32, frames: 1, w: 16, h: 16 },
+                cell_purple: { x: 0,   y: 48, frames: 1, w: 16, h: 16 },
 
-                org_green:   { row: 1, col: 4, frames: 1, w: 16, h: 16 },
-                org_purple:  { row: 1, col: 5, frames: 1, w: 16, h: 32 },
-                org_orange:  { row: 1, col: 6, frames: 1, w: 16, h: 32 },
-                org_blue:    { row: 3, col: 4, frames: 1, w: 32, h: 16 },
-                org_red:     { row: 3, col: 6, frames: 1, w: 16, h: 16 },
+                // Organisms
+                org_green:   { x: 64,  y: 16, frames: 1, w: 16, h: 16 },
+                org_purple:  { x: 80,  y: 16, frames: 1, w: 16, h: 32 },
+                org_orange:  { x: 96,  y: 16, frames: 1, w: 16, h: 32 },
+                org_blue:    { x: 64,  y: 48, frames: 1, w: 16, h: 32 },
+                org_red:     { x: 96,  y: 48, frames: 1, w: 16, h: 16 },
+
+                // Fish
+                fsh_green:   { x: 128, y: 16, frames: 1, w: 32, h: 16 },
+                fsh_purple:  { x: 160, y: 16, frames: 1, w: 32, h: 16 },
+                fsh_orange:  { x: 128, y: 32, frames: 1, w: 32, h: 16 },
+                fsh_blue:    { x: 160, y: 32, frames: 1, w: 32, h: 16 },
+                fsh_red:     { x: 128, y: 48, frames: 1, w: 32, h: 16 },
             });
             
             this.body.ani = options.type || 'cell_green';
