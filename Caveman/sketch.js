@@ -2,6 +2,7 @@ let player;
 let enemiesGroup;
 let enemies = []; // Array to store Enemy instances for updating
 let enemyImage;
+let uiHudSheet = null;
 let timer;
 let stageEnded = false;
 let stageResultText = "";
@@ -10,10 +11,13 @@ const BASE_WIDTH = 720;
 const BASE_HEIGHT = 480;
 const CANVAS_PADDING = 16;
 const ENEMY_COUNT = 10;
+const ENEMY_TYPE_KEYS = ["cell_green", "cell_blue", "cell_red", "cell_orange", "cell_purple"];
 
 function preload() {
   // Load the image directly. We'll define the frame size in the Enemy class.
   enemyImage = loadImage("assets/spriteSheet-export.png");
+  // Uncomment when your HUD sheet is ready:
+  // uiHudSheet = loadImage("assets/ui-hud-sheet.png");
 }
 
 function setup() {
@@ -26,16 +30,24 @@ function setup() {
 
   player = new Player(120, 260, 36, 48);
 
+  // Uncomment and set frame coordinates when your HUD sheet is ready.
+  // setHUDTileSheet(uiHudSheet, {
+  //   tileWidth: 16,
+  //   tileHeight: 16,
+  //   animFps: 8,
+  //   bgFrames: [{ x: 0, y: 0 }, { x: 1, y: 0 }],
+  //   fillFrames: [{ x: 0, y: 1 }, { x: 1, y: 1 }]
+  // });
+
   for (let i = 0; i < ENEMY_COUNT; i++) {
+    const selectedType = random(ENEMY_TYPE_KEYS);
     let enemyInstance = new Enemy(
       random(100, BASE_WIDTH - 100), 
       random(100, BASE_HEIGHT - 100), 
       16, 16, 
       { 
         group: enemiesGroup, 
-        health: 10, 
-        damage: 3, 
-        speed: random(1, 3),
+        type: selectedType,
         spriteSheetImage: enemyImage
       }
     );
@@ -63,7 +75,7 @@ function draw() {
 
   camera.off();
 
-  drawHUD(timer.getRemainingTime() / 1000);
+  drawHUD(timer.getRemainingTime() / 1000, uiHudSheet);
 
   if (stageEnded) {
     drawStageEndOverlay();
@@ -71,6 +83,7 @@ function draw() {
 
   camera.x = width / 2;
   camera.y = height / 2;
+  //console.log(player.typesConsumedd);
 }
 
 function windowResized() {
