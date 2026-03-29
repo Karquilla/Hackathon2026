@@ -113,7 +113,7 @@ const ENEMY_FISH = {
     }
 }
 const MAMMALS = {
-    mouse: {
+    rat: {
         health: 7,
         damage: 9,
         type: 'tank',
@@ -159,7 +159,7 @@ class Enemy {
             this.body = new Sprite(x, y, w, h);
         }
 
-        const typeData = ENEMY_CELL[options.type] || ENEMY_ORGANISM[options.type] || ENEMY_FISH[options.type] || {};
+        const typeData = ENEMY_CELL[options.type] || ENEMY_ORGANISM[options.type] || ENEMY_FISH[options.type] || MAMMALS[options.type] || {};
         this.body.enemyType = typeData.type || options.type || 'basic'; // explicitly set for player.js
         this.body.type = options.type || 'basic';
         this.body.enemyData = typeData; // Attach the full data object to the sprite
@@ -167,38 +167,39 @@ class Enemy {
         this.body.damage = options.damage !== undefined ? options.damage : (typeData.damage || 10);
         this.body.speed = options.speed || (typeData.speed || 2);
         this.body.color = options.color || 'red';
+        this.movementMode = options.movementMode || "topdown";
 
         // Add spritesheet handling
         if (options.spriteSheetImage) {
             this.body.spriteSheet = options.spriteSheetImage;
             this.body.addAnis({
                 // Cells
-                cell_green:  { x: 0,   y: 16, frames: 1, w: 16, h: 16 },
-                cell_blue:   { x: 16,  y: 16, frames: 1, w: 16, h: 16 },
-                cell_red:    { x: 0,   y: 32, frames: 1, w: 16, h: 16 },
-                cell_orange: { x: 16,  y: 32, frames: 1, w: 16, h: 16 },
-                cell_purple: { x: 0,   y: 48, frames: 1, w: 16, h: 16 },
+                cell_green:  { x: 0, y: 16, frames: 1, w: 16, h: 16 },
+                cell_blue:   { x: 48, y: 16, frames: 1, w: 16, h: 16 },
+                cell_red:    { x: 0, y: 32, frames: 1, w: 16, h: 16 },
+                cell_orange: { x: 48, y: 32, frames: 1, w: 16, h: 16 },
+                cell_purple: { x: 0, y: 48, frames: 1, w: 16, h: 16 },
 
                 // Organisms
-                org_green:   { x: 64,  y: 16, frames: 1, w: 16, h: 16 },
-                org_purple:  { x: 80,  y: 16, frames: 1, w: 16, h: 32 },
-                org_orange:  { x: 96,  y: 16, frames: 1, w: 16, h: 32 },
-                org_blue:    { x: 64,  y: 48, frames: 1, w: 16, h: 32 },
-                org_red:     { x: 96,  y: 48, frames: 1, w: 16, h: 16 },
+                org_green:   { x: 112, y: 16, frames: 1, w: 16, h: 16 },
+                org_purple:  { x: 112, y: 32, frames: 1, w: 16, h: 32 },
+                org_orange:  { x: 192, y: 32, frames: 1, w: 16, h: 32 },
+                org_blue:    { x: 112, y: 64, frames: 1, w: 16, h: 32 },
+                org_red:     { x: 192, y: 16, frames: 1, w: 16, h: 16 },
 
                 // Fish
-                fsh_green:   { x: 0,  y: 80,  frames: 1, w: 32, h: 16 },
-                fsh_purple:  { x: 32, y: 80, frames: 1, w: 32, h: 16 },
-                fsh_orange:  { x: 0, y: 96, frames: 1, w: 32, h: 16 },
-                fsh_blue:    { x: 32,   y: 96,   frames: 1, w: 32, h: 16 },
-                fsh_red:     { x: 0,    y: 112,    frames: 1, w: 32, h: 16 },
+                fsh_green:   { x: 256, y: 16, frames: 1, w: 32, h: 16 },
+                fsh_purple:  { x: 256, y: 64, frames: 1, w: 32, h: 16 },
+                fsh_orange:  { x: 256, y: 32, frames: 1, w: 32, h: 16 },
+                fsh_blue:    { x: 256, y: 80, frames: 1, w: 32, h: 16 },
+                fsh_red:     { x: 256, y: 48, frames: 1, w: 32, h: 16 },
 
                 // Mammals
-                mouse:       { x: 0, y: 144, frames: 1, w: 32, h: 16 },
+                rat:         { x: 0, y: 112, frames: 1, w: 32, h: 16 },
                 rabbit:      { x: 0, y: 144, frames: 1, w: 32, h: 16 },
-                fox:         { x: 0, y: 144, frames: 1, w: 32, h: 16 },
-                panda:       { x: 0, y: 144, frames: 1, w: 32, h: 16 },
-                bear:        { x: 0, y: 144, frames: 1, w: 32, h: 16 },
+                fox:         { x: 112, y: 112, frames: 1, w: 32, h: 16 },
+                panda:       { x: 144, y: 112, frames: 1, w: 32, h: 16 },
+                bear:        { x: 112, y: 144, frames: 1, w: 32, h: 16 },
             });
             
             this.body.ani = options.type || 'cell_green';
@@ -206,9 +207,14 @@ class Enemy {
         
         // Random movement setup
         this.body.rotationLock = true;
-        this.body.direction = random(0, 360);
+        if (this.movementMode === "topdown") {
+            this.body.direction = random(0, 360);
+        } else {
+            // Platformer mode: only move left or right
+            this.body.direction = random([0, 180]);
+        }
     }
-    update(worldBounds = null) {
+    update(worldBounds = null, floors = null) {
         // If the sprite has been removed, don't update
         if (!this.body || this.body.removed) return;
 
@@ -219,15 +225,38 @@ class Enemy {
         const centerX = (minX + maxX) / 2;
         const centerY = (minY + maxY) / 2;
 
-        // If the enemy hits the edge, give it a new random direction
-        if (this.body.x < minX || this.body.x > maxX || this.body.y < minY || this.body.y > maxY) {
-            // Move back toward the center slightly to avoid getting stuck
-            this.body.direction = this.body.angleTo(centerX, centerY) + random(-20, 20);
-        }
+        if (this.movementMode === "platformer") {
+            // Apply gravity
+            this.body.vel.y += 0.7; // matches player gravity
+            if (floors) {
+                this.body.collides(floors);
+            }
+            
+            // Limit fall speed
+            if (this.body.vel.y > 14) this.body.vel.y = 14;
 
-        // Occasionally change direction randomly for more "organic" movement
-        if (random(100) < 1) { 
-            this.body.direction += random(-45, 45);
+            // Turn around at world edges
+            if (this.body.x < minX + 20) {
+                this.body.direction = 0;
+                this.body.x = minX + 20;
+            } else if (this.body.x > maxX - 20) {
+                this.body.direction = 180;
+                this.body.x = maxX - 20;
+            }
+
+            // Occasionally change direction
+            if (random(100) < 0.5) {
+                this.body.direction = (this.body.direction === 0) ? 180 : 0;
+            }
+        } else {
+            // Topdown movement logic
+            if (this.body.x < minX || this.body.x > maxX || this.body.y < minY || this.body.y > maxY) {
+                this.body.direction = this.body.angleTo(centerX, centerY) + random(-20, 20);
+            }
+
+            if (random(100) < 1) { 
+                this.body.direction += random(-45, 45);
+            }
         }
     }
 
