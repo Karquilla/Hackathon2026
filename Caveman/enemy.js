@@ -104,11 +104,11 @@ class Enemy {
                 cell_orange: { row: 2, col: 1, frames: 1, w: 16, h: 16 },
                 cell_purple: { row: 3, col: 0, frames: 1, w: 16, h: 16 },
 
-                org_green:   { row: 0, col: 4, frames: 1, w: 16, h: 16 },
-                org_purple:  { row: 0, col: 5, frames: 1, w: 16, h: 32 },
-                org_orange:  { row: 0, col: 6, frames: 1, w: 16, h: 32 },
-                org_blue:    { row: 2, col: 4, frames: 1, w: 32, h: 16 },
-                org_red:     { row: 2, col: 6, frames: 1, w: 16, h: 16 },
+                org_green:   { row: 1, col: 4, frames: 1, w: 16, h: 16 },
+                org_purple:  { row: 1, col: 5, frames: 1, w: 16, h: 32 },
+                org_orange:  { row: 1, col: 6, frames: 1, w: 16, h: 32 },
+                org_blue:    { row: 3, col: 4, frames: 1, w: 32, h: 16 },
+                org_red:     { row: 3, col: 6, frames: 1, w: 16, h: 16 },
             });
             
             this.body.ani = options.type || 'cell_green';
