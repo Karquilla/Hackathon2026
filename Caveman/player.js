@@ -109,40 +109,50 @@ class Player {
     this.isGrounded = false;
   }
 
-  update(enemies, worldBounds = null) {
+  update(enemies, worldBounds = null, floors = null) {
     this.move();
-    this.clampToBounds(worldBounds);
-    if (!enemies) return;
+    this.resolveEnvironment(worldBounds, floors);
 
-    this.tryFireGrapple(enemies);
-    this.updateGrapplePull();
-    this.clampToBounds(worldBounds);
+    if (enemies) {
+      this.tryFireGrapple(enemies);
+      this.updateGrapplePull();
+      this.resolveEnvironment(worldBounds, floors);
 
-    this.body.overlaps(enemies, (_playerCollider, enemyCollider) => {
-      const enemyType = String(
-        enemyCollider.enemyData?.type ??
-        enemyCollider.enemyTypeClass ??
-        enemyCollider.enemyArchetype ??
-        enemyCollider.type ??
-        "unknown"
-      ).toLowerCase();
-      const enemySize = enemyCollider.d ?? max(enemyCollider.w ?? 0, enemyCollider.h ?? 0);
+      this.body.overlaps(enemies, (_playerCollider, enemyCollider) => {
+        const enemyType = String(
+          enemyCollider.enemyData?.type ??
+          enemyCollider.enemyTypeClass ??
+          enemyCollider.enemyArchetype ??
+          enemyCollider.type ??
+          "unknown"
+        ).toLowerCase();
+        const enemySize = enemyCollider.d ?? max(enemyCollider.w ?? 0, enemyCollider.h ?? 0);
 
-      this.typesConsumed.push(enemyType);
-      this.foodConsumed += 1;
-      this.currentSize = max(this.currentSize, enemySize);
-      this.grow();
+        this.typesConsumed.push(enemyType);
+        this.foodConsumed += 1;
+        this.currentSize = max(this.currentSize, enemySize);
+        this.grow();
 
-      enemyCollider.remove();
+        enemyCollider.remove();
 
-      if (this.grappleTarget === enemyCollider) {
-        this.grappleTarget = null;
-        this.grappleFramesLeft = 0;
-      }
-    });
+        if (this.grappleTarget === enemyCollider) {
+          this.grappleTarget = null;
+          this.grappleFramesLeft = 0;
+        }
+      });
+    }
   }
 
-  clampToBounds(bounds) {
+  resolveEnvironment(worldBounds, floors) {
+    this.clampToBounds(worldBounds, floors);
+
+    if (this.movementMode === "platformer" && floors) {
+      this.body.collides(floors);
+      this.isGrounded = this.body.colliding(floors) > 0;
+    }
+  }
+
+  clampToBounds(bounds, floors = null) {
     if (!bounds) return;
 
     const spriteWidth = this.body.w ?? this.body.width ?? 0;
@@ -164,8 +174,11 @@ class Player {
     const clampedMaxY = max(minY, maxY);
 
     const clampedX = constrain(this.body.x, clampedMinX, clampedMaxX);
-    const clampedY = constrain(this.body.y, clampedMinY, clampedMaxY);
-    const reachedFloor = this.movementMode === "platformer" && this.body.y >= clampedMaxY;
+    const shouldClampYToWorldFloor = !(this.movementMode === "platformer" && floors);
+    const clampedY = shouldClampYToWorldFloor
+      ? constrain(this.body.y, clampedMinY, clampedMaxY)
+      : max(this.body.y, clampedMinY);
+    const reachedFloor = shouldClampYToWorldFloor && this.movementMode === "platformer" && this.body.y >= clampedMaxY;
 
     if (clampedX !== this.body.x) {
       this.body.x = clampedX;
@@ -181,7 +194,9 @@ class Player {
       this.body.y = clampedY;
     }
 
-    this.isGrounded = this.movementMode === "platformer" && (reachedFloor || abs(this.body.y - clampedMaxY) < 0.5);
+    if (this.movementMode === "platformer" && shouldClampYToWorldFloor) {
+      this.isGrounded = reachedFloor || abs(this.body.y - clampedMaxY) < 0.5;
+    }
   }
 
   tryFireGrapple(enemies) {
