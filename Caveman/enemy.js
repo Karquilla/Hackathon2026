@@ -197,8 +197,8 @@ class Enemy {
                 // Mammals
                 rat:         { x: 0, y: 112, frames: 1, w: 32, h: 16 },
                 rabbit:      { x: 0, y: 144, frames: 1, w: 32, h: 16 },
-                fox:         { x: 0, y: 176, frames: 1, w: 32, h: 16 },
-                panda:       { x: 112, y: 112, frames: 1, w: 32, h: 16 },
+                fox:         { x: 112, y: 112, frames: 1, w: 32, h: 16 },
+                panda:       { x: 144, y: 112, frames: 1, w: 32, h: 16 },
                 bear:        { x: 112, y: 144, frames: 1, w: 32, h: 16 },
             });
             
