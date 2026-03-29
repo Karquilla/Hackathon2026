@@ -26,7 +26,7 @@ function preload() {
 function setup() {
   new Canvas(BASE_WIDTH, BASE_HEIGHT);
   fitCanvasDisplayToWindow();
-  timer = new CountdownTimer(30000); // 30 seconds in milliseconds
+  timer = new CountdownTimer(10000); // 10 seconds in milliseconds
   timer.start();
 
   enemiesGroup = new Group();
@@ -112,10 +112,11 @@ function endStage() {
     .join(" ");
   const bonusSummary = `+${evolutionResult.bonuses.health} HP  +${evolutionResult.bonuses.rangeShots} RangeShots  +${evolutionResult.bonuses.speed} Speed`;
 
-  stageResultText = `Stage ${stageNumber} Over | ${typeSummary} | ${bonusSummary}`;
+  stageResultText = `Stage ${stageNumber} Over |\n ${typeSummary} |\n ${bonusSummary}`;
 
   if (stageNumber === 1 && startStage2Button) {
     startStage2Button.visible = true;
+    startStage2Button.collider = "static";
   }
 }
 
@@ -165,7 +166,10 @@ function createStageButtons() {
   startStage2Button.color = "#2a9d8f";
   startStage2Button.stroke = "#d9fff8";
   startStage2Button.visible = false;
+  startStage2Button.collider = "none";
   startStage2Button.layer = 1000;
+  startStage2Button.text = "Enter Stage 2";
+
 }
 
 function startStage2() {
@@ -176,7 +180,10 @@ function startStage2() {
   timer.reset(30000);
   timer.start();
   spawnEnemies(STAGE2_ENEMY_TYPE_KEYS);
-  if (startStage2Button) startStage2Button.visible = false;
+  if (startStage2Button) {
+    startStage2Button.visible = false;
+    startStage2Button.collider = "none";
+  }
 }
 
 function drawStageButtons() {
