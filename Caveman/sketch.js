@@ -24,24 +24,37 @@ const ENEMY_COUNT = 40;
 const CAMERA_ZOOM = 1.8;
 const CAMERA_EDGE_BUFFER_X = 170;
 const CAMERA_EDGE_BUFFER_Y = 110;
-const DEBUG_START_STAGE = null; // Set to 1, 2, 3, or 4 to jump directly into that stage.
+const DEBUG_START_STAGE = 5; // Set to 1, 2, 3, 4, or 5 to jump directly into that stage.
 const STAGE1_ENEMY_TYPE_KEYS = ["cell_green", "cell_blue", "cell_red", "cell_orange", "cell_purple"];
 const STAGE2_ENEMY_TYPE_KEYS = ["org_green", "org_blue", "org_red", "org_orange", "org_purple"];
 const STAGE3_ENEMY_TYPE_KEYS = ["fsh_green", "fsh_blue", "fsh_red", "fsh_orange", "fsh_purple"];
 const STAGE4_ENEMY_TYPE_KEYS = ["rat", "rabbit", "fox", "panda", "bear"];
+const STAGE5_ENEMY_TYPE_KEYS = ["man_green", "man_blue", "man_red", "man_orange", "man_purple"];
 const PLAYER_STAGE_APPEARANCES = {
   1: { x: 0, y: 32, w: 16, h: 16 },
   2: { x: 192, y: 16, w: 16, h: 16 },
   3: { x: 256, y: 48, w: 32, h: 16 },
   4: { x: 112, y: 144, w: 32, h: 16 },
+  5: { x: 16, y: 241, w: 16, h: 32 },
   default: { x: 0, y: 32, w: 16, h: 16 }
+};
+const STAGE4_PLATFORM_TILES = {
+  left:   { x: 0, y: 304, w: 16, h: 16 },
+  center: { x: 32, y: 336, w: 16, h: 16 },
+  right:  { x: 32, y: 304, w: 16, h: 16 }
+};
+const STAGE5_PLATFORM_TILES = {
+  left:   { x: 80, y: 304, w: 16, h: 16 },
+  center: { x: 96, y: 304, w: 16, h: 16 },
+  right:  { x: 112, y: 304, w: 16, h: 16 }
 };
 const PLAYER_STAGE_SIZE_RETAIN = 0.8;
 const ENEMY_SIZE_VARIANCE = {
-  1: { min: 0.8, max: 1.25 },
-  2: { min: 0.85, max: 1.3 },
-  3: { min: 0.7, max: 1.55 },
-  4: { min: 0.65, max: 1.6 }
+  1: { min: 0.95, max: 1.9 },
+  2: { min: 1.0, max: 1.85 },
+  3: { min: 0.85, max: 2.0 },
+  4: { min: 0.8, max: 2.1 },
+  5: { min: 0.8, max: 2.15 }
 };
 
 function preload() {
@@ -53,6 +66,10 @@ function preload() {
       loadImage("assets/backLevelOneP2.png")
     ],
     4: [
+      loadImage("assets/backLevelTwo.png"),
+      loadImage("assets/backLevelTwoP2.png")
+    ],
+    5: [
       loadImage("assets/backLevelTwo.png"),
       loadImage("assets/backLevelTwoP2.png")
     ]
@@ -68,11 +85,7 @@ function setup() {
   timer.start();
 
   enemiesGroup = new Group();
-  floorManager = new Floor({ spriteSheetImage: enemyImage, platformTiles: {
-    left:   { x: 0,  y: 304, w: 16, h: 16 },
-    center: { x: 32,  y: 336, w: 16, h: 16 },
-    right:  { x: 32, y: 304, w: 16, h: 16 }
-  } });
+  floorManager = new Floor({ spriteSheetImage: enemyImage, platformTiles: STAGE4_PLATFORM_TILES });
 
   player = createPlayerForStage(stageNumber);
   setStageBackground(stageNumber);
@@ -156,6 +169,7 @@ function fitCanvasDisplayToWindow() {
 function endStage() {
   stageEnded = true;
   timer.pause();
+  freezeActiveActors();
 
   const evolutionResult = player.evolveFromConsumedTypes();
   if (!evolutionResult.evolved) {
@@ -169,12 +183,14 @@ function endStage() {
     stageResultText = `Stage ${stageNumber} Over |\n ${typeSummary} |\n ${bonusSummary}`;
   }
 
-  if ((stageNumber === 1 || stageNumber === 2 || stageNumber === 3) && startStage2Button) {
+  if ((stageNumber === 1 || stageNumber === 2 || stageNumber === 3 || stageNumber === 4) && startStage2Button) {
     stageAdvanceLabel = stageNumber === 1
       ? "Enter Stage 2"
       : stageNumber === 2
         ? "Enter Stage 3"
-        : "Enter Stage 4";
+        : stageNumber === 3
+          ? "Enter Stage 4"
+          : "Enter Stage 5";
     startStage2Button.visible = true;
     startStage2Button.label = stageAdvanceLabel;
   }
@@ -196,7 +212,7 @@ function drawStageEndOverlay() {
 function spawnEnemies(typeKeys) {
   clearEnemies();
 
-  const isStage4 = (stageNumber === 4);
+  const isPlatformStage = stageNumber >= 4;
 
   for (let i = 0; i < ENEMY_COUNT; i++) {
     const selectedType = random(typeKeys);
@@ -206,7 +222,7 @@ function spawnEnemies(typeKeys) {
     let ew = 16;
     let eh = 16;
 
-    if (isStage4) {
+    if (isPlatformStage) {
       ew = 32;
     }
 
@@ -215,7 +231,7 @@ function spawnEnemies(typeKeys) {
 
     let x, y;
 
-    if (isStage4) {
+    if (isPlatformStage) {
       const spawnPlatforms = [
         floorManager.group[0],
         floorManager.group[1],
@@ -242,7 +258,7 @@ function spawnEnemies(typeKeys) {
       group: enemiesGroup,
       type: selectedType,
       spriteSheetImage: enemyImage,
-      movementMode: isStage4 ? "platformer" : "topdown"
+      movementMode: isPlatformStage ? "platformer" : "topdown"
     });
 
     enemies.push(enemyInstance);
@@ -256,6 +272,21 @@ function clearEnemies() {
     }
   }
   enemies = [];
+}
+
+function freezeActiveActors() {
+  if (player?.body && !player.body.removed) {
+    player.body.vel.x = 0;
+    player.body.vel.y = 0;
+  }
+
+  for (const enemy of enemies) {
+    if (!enemy?.body || enemy.body.removed) continue;
+
+    enemy.body.vel.x = 0;
+    enemy.body.vel.y = 0;
+    enemy.body.speed = 0;
+  }
 }
 
 function createStageButtons() {
@@ -328,6 +359,7 @@ function startStage4() {
   stageResultText = "";
   clearEnemies();
   clearStageFloors();
+  floorManager.platformTiles = STAGE4_PLATFORM_TILES;
   buildStage4Platforms();
   player.reduceSizeBetweenStages(PLAYER_STAGE_SIZE_RETAIN);
   player.configureForStage(stageNumber);
@@ -341,6 +373,33 @@ function startStage4() {
   timer.reset(45000);
   timer.start();
   spawnEnemies(STAGE4_ENEMY_TYPE_KEYS);
+  if (startStage2Button) {
+    startStage2Button.visible = false;
+  }
+}
+
+function startStage5() {
+  stageNumber = 5;
+  setStageBackground(stageNumber);
+  stageEnded = false;
+  gameOver = false;
+  stageResultText = "";
+  clearEnemies();
+  clearStageFloors();
+  floorManager.platformTiles = STAGE5_PLATFORM_TILES;
+  buildStage5Platforms();
+  player.reduceSizeBetweenStages(PLAYER_STAGE_SIZE_RETAIN);
+  player.configureForStage(stageNumber);
+  player.typesConsumed = [];
+  player.body.x = 160;
+  player.body.y = WORLD_HEIGHT - 220;
+  player.body.vel.x = 0;
+  player.body.vel.y = 0;
+  camera.x = player.body.x;
+  camera.y = player.body.y;
+  timer.reset(50000);
+  timer.start();
+  spawnEnemies(STAGE5_ENEMY_TYPE_KEYS);
   if (startStage2Button) {
     startStage2Button.visible = false;
   }
@@ -361,6 +420,11 @@ function applyDebugStartStage() {
 
   if (DEBUG_START_STAGE === 4) {
     startStage4();
+    return;
+  }
+
+  if (DEBUG_START_STAGE === 5) {
+    startStage5();
   }
 }
 
@@ -408,12 +472,13 @@ function drawRestartButton() {
 
 function checkStageButtonPresses() {
   if (!startStage2Button || !startStage2Button.visible) return;
-  if (stageNumber !== 1 && stageNumber !== 2 && stageNumber !== 3) return;
+  if (stageNumber !== 1 && stageNumber !== 2 && stageNumber !== 3 && stageNumber !== 4) return;
 
   if (mouse.presses() && isStageButtonHovered()) {
     if (stageNumber === 1) startStage2();
     else if (stageNumber === 2) startStage3();
     else if (stageNumber === 3) startStage4();
+    else if (stageNumber === 4) startStage5();
   }
 }
 
@@ -517,6 +582,22 @@ function buildStage4Platforms() {
   floorManager.add(2580, WORLD_HEIGHT - 220 + platformDrop, 220, 20);
 }
 
+function buildStage5Platforms() {
+  if (!floorManager) return;
+  const platformDrop = 70;
+
+  floorManager.add(WORLD_WIDTH / 2, WORLD_HEIGHT - 18, WORLD_WIDTH, 36);
+  floorManager.add(250, WORLD_HEIGHT - 180 + platformDrop, 180, 20);
+  floorManager.add(520, WORLD_HEIGHT - 320 + platformDrop, 220, 20);
+  floorManager.add(850, WORLD_HEIGHT - 470 + platformDrop, 200, 20);
+  floorManager.add(1180, WORLD_HEIGHT - 310 + platformDrop, 170, 20);
+  floorManager.add(1450, WORLD_HEIGHT - 520 + platformDrop, 240, 20);
+  floorManager.add(1760, WORLD_HEIGHT - 380 + platformDrop, 180, 20);
+  floorManager.add(2030, WORLD_HEIGHT - 560 + platformDrop, 210, 20);
+  floorManager.add(2320, WORLD_HEIGHT - 300 + platformDrop, 190, 20);
+  floorManager.add(2580, WORLD_HEIGHT - 470 + platformDrop, 220, 20);
+}
+
 function setStageBackground(stage) {
   currentStageBackgroundLayers = backgroundImages[stage] ?? [];
 }
@@ -573,6 +654,7 @@ function checkGameOver() {
   gameOver = true;
   stageEnded = false;
   timer.pause();
+  freezeActiveActors();
   stageResultText = `Game Over |\n Stage ${stageNumber} failed |\n Click restart to try again`;
 
   if (startStage2Button) {

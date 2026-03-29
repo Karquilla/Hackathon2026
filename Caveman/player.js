@@ -7,6 +7,7 @@ class Player {
     this.baseHeight = h;
     this.spriteSheetImage = options.spriteSheetImage ?? null;
     this.stageAppearances = options.stageAppearances ?? {};
+    this.currentAppearanceFrame = null;
     this.speed = 5;
     this.movementMode = "topdown";
     this.jumpStrength = 12;
@@ -39,6 +40,7 @@ class Player {
     };
 
     this.setupStageAppearances();
+    this.syncSpriteScale();
   }
 
   move() {
@@ -152,12 +154,16 @@ class Player {
     const aniName = `player_stage_${stageNumber}`;
 
     if (stageFrame && this.body.anis?.[aniName]) {
+      this.currentAppearanceFrame = stageFrame;
       this.body.ani = aniName;
+      this.syncSpriteScale();
       return;
     }
 
     if (this.stageAppearances.default && this.body.anis?.player_stage_default) {
+      this.currentAppearanceFrame = this.stageAppearances.default;
       this.body.ani = "player_stage_default";
+      this.syncSpriteScale();
     }
   }
 
@@ -313,12 +319,13 @@ class Player {
   }
 
   grow() {
-    if (this.foodConsumed % 5 !== 0) return;
+    if (this.foodConsumed % 8 !== 0) return;
     this.currentSize += 1;
-    if (typeof this.body.w === "number") this.body.w += 4;
-    if (typeof this.body.h === "number") this.body.h += 4;
-    if (typeof this.body.width === "number") this.body.width += 4;
-    if (typeof this.body.height === "number") this.body.height += 4;
+    if (typeof this.body.w === "number") this.body.w += 2;
+    if (typeof this.body.h === "number") this.body.h += 2;
+    if (typeof this.body.width === "number") this.body.width += 2;
+    if (typeof this.body.height === "number") this.body.height += 2;
+    this.syncSpriteScale();
   }
 
   reduceSizeBetweenStages(retainPercent = 0.8) {
@@ -334,6 +341,19 @@ class Player {
     if (typeof this.body.height === "number") this.body.height = nextHeight;
 
     this.currentSize = max(this.currentSize * safeRetainPercent, 0);
+    this.syncSpriteScale();
+  }
+
+  syncSpriteScale() {
+    const frameWidth = this.currentAppearanceFrame?.w ?? this.baseWidth;
+    const frameHeight = this.currentAppearanceFrame?.h ?? this.baseHeight;
+    const bodyWidth = this.body.w ?? this.body.width ?? this.baseWidth;
+    const bodyHeight = this.body.h ?? this.body.height ?? this.baseHeight;
+
+    if (!frameWidth || !frameHeight) return;
+
+    this.body.scale.x = bodyWidth / frameWidth;
+    this.body.scale.y = bodyHeight / frameHeight;
   }
 
   getCombatSize() {
