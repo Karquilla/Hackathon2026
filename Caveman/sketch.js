@@ -2,6 +2,9 @@ let player;
 let enemiesGroup;
 let enemies = []; // Array to store Enemy instances for updating
 let enemyImage;
+let timer;
+let stageEnded = false;
+let stageResultText = "";
 
 const BASE_WIDTH = 720;
 const BASE_HEIGHT = 480;
@@ -42,15 +45,28 @@ function setup() {
 
 function draw() {
   background("#555555");
+
+  if (!stageEnded && timer.isFinished()) {
+    endStage();
+  }
+
   camera.on();
-  player.update(enemiesGroup);
+
+  if (!stageEnded) {
+    player.update(enemiesGroup);
+
+    // Update each enemy instance
+    for (let enemy of enemies) {
+      enemy.update();
+    }
+  }
+
   camera.off();
 
-  drawHUD(timer.getRemainingTime()/1000);
+  drawHUD(timer.getRemainingTime() / 1000);
 
-  // Update each enemy instance
-  for (let enemy of enemies) {
-    enemy.update();
+  if (stageEnded) {
+    drawStageEndOverlay();
   }
 
   camera.x = width / 2;
@@ -73,4 +89,35 @@ function fitCanvasDisplayToWindow() {
   // Keep gameplay/world units fixed and only scale visual size.
   canvasEl.style.width = `${displayWidth}px`;
   canvasEl.style.height = `${displayHeight}px`;
+}
+
+function endStage() {
+  stageEnded = true;
+  timer.pause();
+
+  const evolutionResult = player.evolveFromConsumedTypes();
+  if (!evolutionResult.evolved) {
+    stageResultText = "Stage Over: no evolution (nothing consumed)";
+    return;
+  }
+
+  const typeSummary = Object.entries(evolutionResult.counts)
+    .map(([type, count]) => `${type}:${count}`)
+    .join(" ");
+  const bonusSummary = `+${evolutionResult.bonuses.health} HP  +${evolutionResult.bonuses.rangeShots} RangeShots  +${evolutionResult.bonuses.speed} Speed`;
+
+  stageResultText = `Stage Over | ${typeSummary} | ${bonusSummary}`;
+}
+
+function drawStageEndOverlay() {
+  push();
+  noStroke();
+  fill(0, 0, 0, 170);
+  rect(0, 0, width, height);
+
+  textAlign(CENTER, CENTER);
+  textSize(28);
+  fill(255);
+  text(stageResultText, width / 2, height / 2);
+  pop();
 }
